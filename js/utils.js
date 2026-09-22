@@ -1,63 +1,49 @@
 import { state } from "./state.js";
 
-export function findEvidenceById(id) {
-  for (var i = 0; i < state.allEvidence.length; i++) {
-    if (state.allEvidence[i].id === id) return state.allEvidence[i];
-  }
-  return null;
-}
+// Alle Funktionen hier sind kleine, zustandslose Helfer ohne eigenes `this` und ohne
+// `arguments` - damit sind sie unproblematische Kandidaten fuer Arrow Functions.
+// Die drei Lookups ersetzen gleichzeitig handgeschriebene for-Schleifen durch
+// Array.prototype.find: weniger Code, kein Schleifenindex, keine off-by-one-Gelegenheit.
 
-export function findPersonById(id) {
-  for (var i = 0; i < state.allPeople.length; i++) {
-    if (state.allPeople[i].id === id) return state.allPeople[i];
-  }
-  return null;
-}
+export const findEvidenceById = (id) => state.allEvidence.find((ev) => ev.id === id) || null;
 
-export function findLocationById(id) {
-  for (var i = 0; i < state.allLocations.length; i++) {
-    if (state.allLocations[i].id === id) return state.allLocations[i];
-  }
-  return null;
-}
+export const findPersonById = (id) => state.allPeople.find((person) => person.id === id) || null;
 
-export function evidenceMentionsPerson(ev, person) {
-  if (!ev.personIds) return false;
-  return ev.personIds.indexOf(person.id) !== -1 || ev.personIds.indexOf(person.name) !== -1;
-}
+export const findLocationById = (id) => state.allLocations.find((loc) => loc.id === id) || null;
 
-export function formatDate(ts) {
+export const evidenceMentionsPerson = (ev, person) =>
+  Boolean(ev.personIds) &&
+  (ev.personIds.includes(person.id) || ev.personIds.includes(person.name));
+
+export const formatDate = (ts) => {
   if (!ts) return "Unknown date";
-  var d = new Date(ts);
+  const d = new Date(ts);
   if (isNaN(d.getTime())) return ts;
-  return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) +
-    " " + d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-}
+  return (
+    d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) +
+    " " +
+    d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+  );
+};
 
-export function getStatusBadgeClass(status) {
-  var s = (status || "").toLowerCase();
+export const getStatusBadgeClass = (status) => {
+  const s = (status || "").toLowerCase();
   if (s === "reviewed") return "badge-reviewed";
   if (s === "flagged") return "badge-flagged";
   return "badge-unreviewed";
-}
+};
 
-export function getRelevanceBadgeClass(relevance) {
-  var r = (relevance || "").toLowerCase();
-  if (r === "relevant") return "badge-relevant";
-  return "badge-unreviewed";
-}
+export const getRelevanceBadgeClass = (relevance) =>
+  (relevance || "").toLowerCase() === "relevant" ? "badge-relevant" : "badge-unreviewed";
 
-export function certaintyBadgeClass(certainty) {
+export const certaintyBadgeClass = (certainty) => {
   if (certainty === "confirmed") return "reviewed";
   if (certainty === "contradictory") return "critical";
   if (certainty === "reported") return "flagged";
   return "unreviewed";
-}
+};
 
-export function getSelectedOptions(selectEl) {
-  var result = [];
-  for (var i = 0; i < selectEl.options.length; i++) {
-    if (selectEl.options[i].selected) result.push(selectEl.options[i].value);
-  }
-  return result;
-}
+export const getSelectedOptions = (selectEl) =>
+  Array.from(selectEl.options)
+    .filter((option) => option.selected)
+    .map((option) => option.value);

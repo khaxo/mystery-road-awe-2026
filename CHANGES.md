@@ -605,3 +605,269 @@ allein durch Lesen des Codes nicht zu sehen, weil beide Stellen (`handleSortChan
 Vier Sortierkriterien liefern vier verschiedene erste Eintraege. Die Sortierung bleibt
 nach einem Filterwechsel erhalten. `state.allEvidence` steht unveraendert auf
 `E01,E02,E03,…`.
+
+---
+
+## Demo 8 — Clean Coding: Globals, `var`/`let`/`const`, Code Smells
+
+### Die 19 globalen `var`s des Originals
+
+Zeilen 4-35 und 498 von `app.js` (Stand `22cb2d8`):
+
+`allEvidence`, `filteredEvidence`, `selectedEvidence`, `bookmarks`, `currentPage`,
+`allPeople`, `allLocations`, `allTimeline`, `caseData`, `currentPeopleTab`,
+`loadingStepsRemaining`, `evidenceViewLoading`, `viewRendered`, `notesStore`,
+`modalCloseListenerCount`, `latestSearchRequestId`, `STORAGE_KEY_BOOKMARKS`,
+`STORAGE_KEY_NOTES`, `STORAGE_KEY_HYPOTHESIS`.
+
+**Was bei Namenskollisionen passiert waere — drei konkrete Faelle:**
+
+1. **`bookmarks`** — ein extrem generischer Name. Ein zweites Skript im selben
+   Dokument (Analytics, ein Widget, eine Browser-Extension, die ins Seiten-Scope
+   schreibt) mit einem eigenen `var bookmarks` haette dieselbe Bindung getroffen, weil
+   beide auf `window.bookmarks` landen. Symptom: Bookmarks verschwinden oder tauchen
+   doppelt auf, ohne dass eine Zeile im eigenen Code falsch aussieht.
+
+2. **`state.currentPage`** (frueher `currentPage`) — steuert, welche View gerendert wird.
+   Ein fremdes `currentPage` haette die Navigation stillschweigend uebernommen: `navigateTo`
+   setzt den Wert, `handleHashChange` liest ihn, und zwischendurch schreibt jemand
+   anders. Der Fehler waere nicht reproduzierbar gewesen, weil er von der Ladereihenfolge
+   der Skripte abhaengt.
+
+3. **`loadingStepsRemaining`** — ein Zaehler, der von `hideLoadingStep()` dekrementiert
+   wird. Waere er von aussen veraenderbar, koennte das Lade-Overlay entweder nie
+   verschwinden (Wert zu hoch) oder zu frueh (Wert zu niedrig, Views rendern mit leeren
+   Daten). Exakt die Fehlerklasse von Bug 1, nur mit einer anderen Ursache.
+
+**Wie der Modul-Split das verhindert:** Jedes Modul hat seinen eigenen Top-Level-Scope.
+Nichts landet mehr auf `window` — nachgewiesen: `window.allEvidence`, `window.navigateTo`
+und `window.state` sind jetzt `undefined`. Zugriff gibt es nur noch ueber einen
+expliziten `import`, und der ist im Code sichtbar. Fremde Skripte im selben Dokument
+koennen die Werte weder lesen noch ueberschreiben.
+
+**Was der Split NICHT loest:** Der Zustand ist weiterhin *geteilt* und veraenderlich.
+`state.allEvidence = ...` aus einem beliebigen importierenden Modul ist nach wie vor
+moeglich. Gewonnen ist die Kapselung nach aussen und die Nachvollziehbarkeit der
+Schreibzugriffe, nicht Unveraenderlichkeit.
+
+### `var` -> `const`/`let`
+
+Alle **161** Deklarationen umgestellt: **107 `const`, 54 `let`**. `grep -rn "\bvar \b" js/`
+liefert keinen Treffer mehr.
+
+Die Entscheidung fiel pro Deklaration danach, ob die Variable in ihrer Funktion spaeter
+neu zugewiesen wird — nicht pauschal. `let` blieb im Wesentlichen fuer:
+
+- **Schleifenzaehler** (`i`, `p`, `l`, `b`, `n`, `t`) — werden per `i++` veraendert
+- **Akkumulatoren** (`html`, `count`, `reviewedCount`, `tagsHtml`) — werden in einer
+  Schleife per `+=` aufgebaut
+- **umgehaengte Referenzen** (`events`, `modal`, `el`, `hash`) — zeigen im Verlauf der
+  Funktion auf etwas anderes
+
+Wichtig fuer die Prueffrage: `const` verhindert **Neuzuweisung**, nicht **Mutation**.
+`const results = []; results.push(x);` ist voellig in Ordnung — genau deshalb konnten so
+viele Arrays und Objekte auf `const` umgestellt werden. Bug 5 waere durch `const` also
+**nicht** verhindert worden: dort wurde nichts neu zugewiesen, sondern ein geteiltes
+Array in place sortiert.
+
+### Code Smells (ueber die Globals hinaus)
+
+1. **Doppelte Bindung am Status-Filter** — siehe Bug 6. `addEventListener` *und*
+   `setAttribute("onchange", ...)` auf demselben Element, als einziger der fuenf Filter.
+   Kostete pro Filteraenderung einen kompletten ueberfluessigen Render-Durchlauf.
+   Behoben.
+
+2. **Verwaistes `resources/`-Verzeichnis** — sechs Personen-Bilder als Duplikate von
+   `assets/people/`, nur mit Unterstrich statt Bindestrich im Namen, und nirgends
+   referenziert (`grep -rn "resources/"` -> kein Treffer). Toter Ballast, der beim Lesen
+   eine Abhaengigkeit suggeriert und beim Aendern eines Bildes die Frage aufwirft, welche
+   Kopie gilt. **Geloescht** (in der Historie erhalten).
+
+3. **Listener-Registrierung in der Render-Schleife** — siehe eigener Abschnitt oben.
+   Kein Bug, aber eine Zeile, die sich auf ein Detail der Event-Spec verliess.
+   Herausgezogen nach `setupEventListeners`.
+
+4. **Doppelter `hashchange`-Listener** — einmal in `setupEventListeners`, einmal am
+   Dateiende. Wirkungslos (identische Referenzen werden dedupliziert), aber irrefuehrend.
+   Entfernt.
+
+5. **Handgeschriebene `for`-Schleifen fuer Lookups** — `findEvidenceById`,
+   `findPersonById`, `findLocationById` und `getSelectedOptions` durchliefen Arrays per
+   Index. Ersetzt durch `find()` / `filter().map()`: kuerzer, kein Schleifenindex, keine
+   Gelegenheit fuer einen Off-by-one — der Fehler, der in Bug 2 tatsaechlich aufgetreten
+   ist.
+
+### "Funktioniert" ist nicht "sauber"
+
+Konkretes Beispiel aus diesem Projekt: die **Sortierung**. Sie tat vor allen Aenderungen
+genau das, was der Benutzer erwartete — und stuetzte sich dabei ausschliesslich auf den
+Aliasing-Bug (Bug 5/7). Der Code war korrekt im Sinne von "tut was er soll", aber jede
+Aenderung an einer voellig anderen Stelle (hier: der Bug-1-Fix) konnte ihn umbringen.
+Die reale Kosten der unsauberen Variante: ein Feature, dessen Funktionieren niemand aus
+dem Code ableiten kann, das kein Test absichert und dessen Ausfall erst beim Klicken
+auffaellt.
+
+---
+
+## Demo 9 — Von verschachtelten Promises zu `async`/`await`
+
+### Die tiefste Kette: `loadCorePeopleAndLocations`
+
+**Form vorher** — sechs Ebenen, jede Ebene startet erst nach Abschluss der vorigen:
+
+    fetch("data/case.json")
+      .then(caseRes => caseRes.json()
+        .then(caseJson => {
+          caseData = caseJson;
+          return fetch("data/people.json")
+            .then(peopleRes => peopleRes.json()
+              .then(peopleJson => {
+                allPeople = peopleJson;
+                return fetch("data/locations.json")
+                  .then(locationsRes => locationsRes.json()
+                    .then(locationsJson => { ... }))
+              }))
+        }))
+
+Die Verschachtelung entstand dadurch, dass `.json()` jeweils *innerhalb* des
+`.then()`-Callbacks aufgeloest wurde, statt die Kette flach zurueckzugeben. Jede der drei
+Dateien ist von der vorigen abhaengig — bzw. wurde so behandelt.
+
+**Nachher** — dieselbe Ablauffolge, ohne Verschachtelung:
+
+    async function loadCorePeopleAndLocations() {
+      const caseRes = await fetch("data/case.json");
+      state.caseData = await caseRes.json();
+
+      const peopleRes = await fetch("data/people.json");
+      state.allPeople = await peopleRes.json();
+
+      const locationsRes = await fetch("data/locations.json");
+      state.allLocations = await locationsRes.json();
+
+      hideLoadingStep();
+      renderDashboard();
+      populateAllDropdowns();
+    }
+
+**Bewusst NICHT geaendert:** Die drei Requests laufen weiterhin *nacheinander*. Ein
+`Promise.all([...])` waere hier schneller, ist aber ausdruecklich Thema einer spaeteren
+Uebung.
+
+### Weitere umgestellte Stellen
+
+| Stelle | vorher | nachher |
+|---|---|---|
+| `loadEvidenceData` | `.then().then().catch()` | `async` + `try`/`catch` |
+| `loadTimelineData` | `.then().then().catch().finally()` | `async` + `try`/`catch`/`finally` |
+| `loadAllData` | `.then()` | `async` + `await` |
+| `initApp` (main.js) | zwei geschachtelte `.then()` | zwei `await` |
+| `handleSearchInput` (evidence.js) | `.then()` mit Race-Guard | `await` + Guard danach |
+
+Das Error-Handling ist ueberall erhalten: aus `.catch(err => ...)` wurde `catch (err) { ... }`,
+aus `.finally(...)` wurde `finally { ... }` mit identischem Inhalt.
+
+Bei `handleSearchInput` war die Reihenfolge kritisch: der Guard
+`if (requestId !== state.latestSearchRequestId) return;` muss **nach** dem `await` stehen.
+Davor waere er wirkungslos, weil sich `latestSearchRequestId` genau waehrend der Wartezeit
+aendert (der Benutzer tippt weiter).
+
+### Zu den Prueffragen
+
+- **Was `await` tut:** Es pausiert *nur die async-Funktion*, in der es steht, und gibt die
+  Kontrolle an die Event-Loop zurueck. Das Programm laeuft normal weiter — Klicks, Timer,
+  Rendering, andere async-Funktionen. Die Funktion setzt fort, wenn das Promise
+  aufgeloest ist und der Microtask an der Reihe ist.
+- **Rueckgabewert:** Eine `async`-Funktion gibt **immer** ein Promise zurueck.
+  `loadAllData()` liefert also ein Promise; `loadAllData().then(v => console.log(v))`
+  loggt `undefined`, weil die Funktion nichts zurueckgibt — nicht etwa gar nichts.
+- **`.catch()`-Aequivalent:** `try`/`catch` um das `await`. Fehlt es und das awaitete
+  Promise rejected, wird die Rejection zu einer unbehandelten Promise-Rejection der
+  aufrufenden Kette — sichtbar als `Uncaught (in promise)` in der Console, waehrend die
+  Funktion ab dem `await` einfach nicht weiterlaeuft. Kein Absturz, kein sichtbarer
+  Fehler in der UI: genau die Fehlerklasse von Bug 1.
+- **Schneller?** Nein. `async`/`await` ist Syntax ueber denselben Promises; es aendert
+  nichts an der Anzahl oder Reihenfolge der Netzwerk-Requests. Was sich aendert, ist
+  ausschliesslich die Lesbarkeit. Wer hier Geschwindigkeit gewinnen will, braucht
+  `Promise.all` — eine andere Aenderung.
+- **Ein `await` entfernen:** Aus `const caseRes = await fetch(...)` wird ein Promise in
+  `caseRes`, und `caseRes.json()` wirft `caseRes.json is not a function`. Das ist dieselbe
+  Kategorie wie Bug 3, wo ein Promise geloggt statt ausgepackt wurde.
+
+---
+
+## Demo 10 — Arrow Functions
+
+### Konvertiert
+
+**`js/utils.js` komplett** — neun kleine, zustandslose Helfer ohne `this` und ohne
+`arguments`. Beispiel:
+
+    // vorher
+    function getRelevanceBadgeClass(relevance) {
+      var r = (relevance || "").toLowerCase();
+      if (r === "relevant") return "badge-relevant";
+      return "badge-unreviewed";
+    }
+
+    // nachher
+    export const getRelevanceBadgeClass = (relevance) =>
+      (relevance || "").toLowerCase() === "relevant" ? "badge-relevant" : "badge-unreviewed";
+
+Weitere: `statCardHTML` (dashboard.js) und `simulateAsyncSearch` (evidence.js), letztere
+von drei verschachtelten `function`-Ausdruecken auf einen Einzeiler:
+
+    const simulateAsyncSearch = (term) =>
+      new Promise((resolve) => setTimeout(() => resolve(term), 300));
+
+**Anonyme `addEventListener`-Callbacks:** sechs Stueck in evidence.js (2), people.js (1),
+timeline.js (2), workspace.js (1), plus saemtliche Listener in `main.js`, die beim
+Modul-Split ohnehin neu geschrieben wurden. Dazu vier `sort()`-Comparatoren.
+
+**Verhaltensunterschied?** Bei diesen Konvertierungen: keiner. Keine der Funktionen
+benutzt `this`, `arguments`, `new` oder `super`, und keine wird als Objektmethode
+verwendet. Es ist eine reine Lesbarkeitsaenderung — nachgewiesen dadurch, dass der
+komplette Funktionsdurchlauf (Navigation, Suche, Sortierung, Bookmarks, Detailansicht,
+Notizen, Tabs, Cross-Links, Modal, Workspace, Hypothese) danach unveraendert
+durchlaeuft, bei null Laufzeitfehlern.
+
+### Bewusst nicht konvertiert: `initApp` in `js/main.js`
+
+Ehrlicher Befund vorweg: In diesem Codebestand gibt es **kein einziges `this`** und
+**kein `arguments`** (`grep -rn "\bthis\b" js/` findet nur Kommentare und einen
+HTML-String). Das klassische Gegenargument "Arrow als Objektmethode bricht `this`" laesst
+sich hier also nicht an echtem Code zeigen — es gibt keine Objektmethoden.
+
+Der reale Grund, `initApp` als Funktionsdeklaration zu behalten, ist **Hoisting**:
+`main.js` ruft `initApp()` auf Modul-Top-Level auf. Funktionsdeklarationen werden
+vollstaendig gehoistet, der Aufruf darf also ueber der Definition stehen. Ein
+`const initApp = async () => {...}` unterliegt der Temporal Dead Zone.
+
+Empirisch belegt mit zwei Minimalmodulen:
+
+    // A: Funktionsdeklaration, Aufruf davor  -> laeuft
+    starte();
+    function starte() { ... }
+
+    // B: const-Arrow, Aufruf davor           -> ReferenceError
+    starte();
+    const starte = () => { ... };
+    // ReferenceError: Cannot access 'starte' before initialization
+
+Solange der Aufruf am Dateiende steht, funktionieren beide Varianten. Die Deklaration ist
+aber robust gegen Umsortieren der Datei — und `initApp` ist genau die Funktion, bei der
+jemand den Aufruf irgendwann nach oben zieht.
+
+### Vorgeschlagene Team-Regel
+
+1. **Arrow Functions** fuer alles, was als Wert weitergereicht wird: Callbacks,
+   Comparatoren, Event-Handler, Promise-Executors, `map`/`filter`/`find`. Sie sind kuerzer
+   und uebernehmen `this` lexikalisch, was in Callbacks fast immer das Gewuenschte ist.
+2. **Funktionsdeklarationen** fuer benannte Top-Level-Funktionen eines Moduls,
+   insbesondere Einstiegspunkte und alles, was gegenseitig oder frueh aufgerufen wird —
+   wegen Hoisting und weil der Name im Stacktrace erscheint.
+3. **Niemals Arrow** fuer Objektmethoden, Konstruktoren oder Funktionen, die `arguments`
+   brauchen.
+
+Begruendung: Die Regel richtet sich nach *Aufrufkontext*, nicht nach Laenge. Sie ist
+mechanisch pruefbar und erklaert in jedem Einzelfall, warum die Wahl so ausfiel.

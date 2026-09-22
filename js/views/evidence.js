@@ -3,53 +3,53 @@ import { loadNoteForEvidence, saveBookmarksToStorage, saveNoteForEvidence } from
 import { evidenceMentionsPerson, findEvidenceById, findLocationById, findPersonById, formatDate, getRelevanceBadgeClass, getStatusBadgeClass } from "../utils.js";
 
 export function populateEvidenceDropdowns() {
-  var typeSelect = document.getElementById("filterType");
-  var personSelect = document.getElementById("filterPerson");
-  var locationSelect = document.getElementById("filterLocation");
+  const typeSelect = document.getElementById("filterType");
+  const personSelect = document.getElementById("filterPerson");
+  const locationSelect = document.getElementById("filterLocation");
   if (!typeSelect || !personSelect || !locationSelect) return;
 
-  var types = [];
-  for (var i = 0; i < state.allEvidence.length; i++) {
-    var t = state.allEvidence[i].type.toLowerCase();
+  const types = [];
+  for (let i = 0; i < state.allEvidence.length; i++) {
+    const t = state.allEvidence[i].type.toLowerCase();
     if (types.indexOf(t) === -1) types.push(t);
   }
   typeSelect.innerHTML = '<option value="">All types</option>';
-  for (var ti = 0; ti < types.length; ti++) {
+  for (let ti = 0; ti < types.length; ti++) {
     typeSelect.innerHTML += '<option value="' + types[ti] + '">' + types[ti] + "</option>";
   }
 
   personSelect.innerHTML = '<option value="">All people</option>';
-  for (var p = 0; p < state.allPeople.length; p++) {
+  for (let p = 0; p < state.allPeople.length; p++) {
     personSelect.innerHTML += '<option value="' + state.allPeople[p].id + '">' + state.allPeople[p].name + "</option>";
   }
 
   locationSelect.innerHTML = '<option value="">All locations</option>';
-  for (var l = 0; l < state.allLocations.length; l++) {
+  for (let l = 0; l < state.allLocations.length; l++) {
     locationSelect.innerHTML += '<option value="' + state.allLocations[l].id + '">' + state.allLocations[l].id + " - " + state.allLocations[l].name + "</option>";
   }
 }
 
 export function getFilteredEvidence() {
-  var searchBox = document.getElementById("evidenceSearch");
-  var searchTerm = searchBox ? searchBox.value.toLowerCase().trim() : "";
-  var typeVal = document.getElementById("filterType").value;
-  var personVal = document.getElementById("filterPerson").value;
-  var locationVal = document.getElementById("filterLocation").value;
-  var statusVal = document.getElementById("filterStatus").value;
-  var relevanceVal = document.getElementById("filterRelevance").value;
+  const searchBox = document.getElementById("evidenceSearch");
+  const searchTerm = searchBox ? searchBox.value.toLowerCase().trim() : "";
+  const typeVal = document.getElementById("filterType").value;
+  const personVal = document.getElementById("filterPerson").value;
+  const locationVal = document.getElementById("filterLocation").value;
+  const statusVal = document.getElementById("filterStatus").value;
+  const relevanceVal = document.getElementById("filterRelevance").value;
 
-  var results = [];
-  for (var i = 0; i < state.allEvidence.length; i++) {
-    var item = state.allEvidence[i];
-    var matches = true;
+  const results = [];
+  for (let i = 0; i < state.allEvidence.length; i++) {
+    const item = state.allEvidence[i];
+    let matches = true;
 
     if (searchTerm) {
-      var haystack = (item.title + " " + item.summary + " " + item.tags.join(" ")).toLowerCase();
+      const haystack = (item.title + " " + item.summary + " " + item.tags.join(" ")).toLowerCase();
       if (haystack.indexOf(searchTerm) === -1) matches = false;
     }
     if (matches && typeVal && item.type.toLowerCase() !== typeVal) matches = false;
     if (matches && personVal) {
-      var person = findPersonById(personVal);
+      const person = findPersonById(personVal);
       if (!person || !evidenceMentionsPerson(item, person)) matches = false;
     }
     if (matches && locationVal && item.locationIds.indexOf(locationVal) === -1) matches = false;
@@ -69,30 +69,22 @@ export function getFilteredEvidence() {
 // handleSortChange brauchen das.
 function sortEvidenceList(list, sortValue) {
   if (sortValue === "title-asc") {
-    list.sort(function (a, b) {
-      return a.title.localeCompare(b.title);
-    });
+    list.sort((a, b) => a.title.localeCompare(b.title));
   } else if (sortValue === "title-desc") {
-    list.sort(function (a, b) {
-      return b.title.localeCompare(a.title);
-    });
+    list.sort((a, b) => b.title.localeCompare(a.title));
   } else if (sortValue === "date-asc") {
-    list.sort(function (a, b) {
-      return new Date(a.timestamp) - new Date(b.timestamp);
-    });
+    list.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
   } else {
-    list.sort(function (a, b) {
-      return new Date(b.timestamp) - new Date(a.timestamp);
-    });
+    list.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   }
   return list;
 }
 
 export function renderEvidenceList() {
-  var container = document.getElementById("evidenceList");
+  const container = document.getElementById("evidenceList");
   if (!container) return;
 
-  var loadingIndicator = document.getElementById("evidenceLoadingIndicator");
+  const loadingIndicator = document.getElementById("evidenceLoadingIndicator");
   if (state.evidenceViewLoading) {
     if (loadingIndicator) loadingIndicator.classList.remove("hidden");
     container.innerHTML = "";
@@ -100,21 +92,21 @@ export function renderEvidenceList() {
   }
   if (loadingIndicator) loadingIndicator.classList.add("hidden");
 
-  var results = getFilteredEvidence();
+  const results = getFilteredEvidence();
 
-  var html = "";
+  let html = "";
   if (results.length === 0) {
     html = "<p>No evidence matches the current filters.</p>";
   }
-  for (var i = 0; i < results.length; i++) {
+  for (let i = 0; i < results.length; i++) {
     html += renderEvidenceCardHTML(results[i]);
   }
   container.innerHTML = html;
 }
 
 function renderEvidenceCardHTML(ev) {
-  var isBookmarked = state.bookmarks.indexOf(ev.id) !== -1;
-  var html = '<div class="evidence-card" data-id="' + ev.id + '">';
+  const isBookmarked = state.bookmarks.indexOf(ev.id) !== -1;
+  let html = '<div class="evidence-card" data-id="' + ev.id + '">';
   html += '<button class="bookmark-btn ' + (isBookmarked ? "active" : "") + '" data-action="bookmark" data-id="' + ev.id + '" aria-label="Toggle bookmark for ' + ev.title + '"><span class="bookmark-icon">' + (isBookmarked ? "★" : "☆") + "</span></button>";
   html += "<h3>" + ev.title + "</h3>";
   html += '<div class="evidence-meta">' + ev.id + " &middot; " + ev.type + " &middot; " + formatDate(ev.timestamp) + "</div>";
@@ -126,7 +118,7 @@ function renderEvidenceCardHTML(ev) {
   html += '<span class="badge ' + getStatusBadgeClass(ev.status) + '">' + ev.status + "</span>";
   html += '<span class="badge ' + getRelevanceBadgeClass(ev.relevance) + '">' + ev.relevance + "</span>";
   html += "<div>";
-  for (var t = 0; t < ev.tags.length; t++) {
+  for (let t = 0; t < ev.tags.length; t++) {
     html += '<span class="tag-chip">' + ev.tags[t] + "</span>";
   }
   html += "</div>";
@@ -135,7 +127,7 @@ function renderEvidenceCardHTML(ev) {
 }
 
 export function handleEvidenceListClick(event) {
-  var target = event.target;
+  const target = event.target;
 
   if (target.dataset && target.dataset.action === "bookmark") {
     event.stopPropagation();
@@ -143,14 +135,14 @@ export function handleEvidenceListClick(event) {
     return;
   }
 
-  var card = target.closest(".evidence-card");
+  const card = target.closest(".evidence-card");
   if (card) {
     openEvidenceDetail(card.getAttribute("data-id"));
   }
 }
 
 function handleBookmarkClick(evidenceId) {
-  var ev = findEvidenceById(evidenceId);
+  const ev = findEvidenceById(evidenceId);
   if (!ev) return;
 
   if (state.bookmarks.indexOf(evidenceId) === -1) {
@@ -167,7 +159,7 @@ function handleBookmarkClick(evidenceId) {
 }
 
 export function applyStoredBookmarkFlags() {
-  for (var i = 0; i < state.allEvidence.length; i++) {
+  for (let i = 0; i < state.allEvidence.length; i++) {
     state.allEvidence[i].bookmarked = state.bookmarks.indexOf(state.allEvidence[i].id) !== -1;
   }
 }
@@ -188,31 +180,28 @@ export function clearFilters() {
   renderEvidenceList();
 }
 
-function simulateAsyncSearch(term) {
-  return new Promise(function (resolve) {
-    setTimeout(function () {
-      resolve(term);
-    }, 300);
-  });
-}
+const simulateAsyncSearch = (term) =>
+  new Promise((resolve) => setTimeout(() => resolve(term), 300));
 
-export function handleSearchInput(event) {
-  var term = event.target.value;
-  var requestId = ++state.latestSearchRequestId;
+export async function handleSearchInput(event) {
+  const term = event.target.value;
+  const requestId = ++state.latestSearchRequestId;
 
-  simulateAsyncSearch(term).then(function (resolvedTerm) {
-    // Only apply this response if nothing newer has been typed meanwhile.
-    if (requestId !== state.latestSearchRequestId) return;
-    renderEvidenceList();
-  });
+  await simulateAsyncSearch(term);
+
+  // Only apply this response if nothing newer has been typed meanwhile.
+  // Der Guard muss NACH dem await stehen - davor waere er sinnlos, weil sich
+  // latestSearchRequestId genau waehrend der Wartezeit aendern kann.
+  if (requestId !== state.latestSearchRequestId) return;
+  renderEvidenceList();
 }
 
 export function openEvidenceDetail(evidenceId) {
-  var ev = findEvidenceById(evidenceId);
+  const ev = findEvidenceById(evidenceId);
   if (!ev) return;
   state.selectedEvidence = ev;
 
-  var section = document.getElementById("evidenceDetailSection");
+  const section = document.getElementById("evidenceDetailSection");
   section.classList.remove("hidden");
 
   renderEvidenceDetail(ev);
@@ -220,35 +209,35 @@ export function openEvidenceDetail(evidenceId) {
 }
 
 export function closeEvidenceDetail() {
-  var section = document.getElementById("evidenceDetailSection");
+  const section = document.getElementById("evidenceDetailSection");
   section.classList.add("hidden");
   section.innerHTML = "";
   state.selectedEvidence = null;
 }
 
 function renderEvidenceDetail(ev) {
-  var section = document.getElementById("evidenceDetailSection");
+  const section = document.getElementById("evidenceDetailSection");
 
-  var personNames = [];
-  for (var p = 0; p < ev.personIds.length; p++) {
-    var person = findPersonById(ev.personIds[p]);
+  const personNames = [];
+  for (let p = 0; p < ev.personIds.length; p++) {
+    const person = findPersonById(ev.personIds[p]);
     personNames.push(person ? person.name : ev.personIds[p]);
   }
 
-  var locationNames = [];
-  for (var l = 0; l < ev.locationIds.length; l++) {
-    var loc = findLocationById(ev.locationIds[l]);
+  const locationNames = [];
+  for (let l = 0; l < ev.locationIds.length; l++) {
+    const loc = findLocationById(ev.locationIds[l]);
     locationNames.push(loc ? loc.id + " - " + loc.name : ev.locationIds[l]);
   }
 
-  var tagsHtml = "";
-  for (var t = 0; t < ev.tags.length; t++) {
+  let tagsHtml = "";
+  for (let t = 0; t < ev.tags.length; t++) {
     tagsHtml += '<span class="tag-chip">' + ev.tags[t] + "</span>";
   }
 
-  var storedNote = loadNoteForEvidence(ev.id);
+  const storedNote = loadNoteForEvidence(ev.id);
 
-  var html = "";
+  let html = "";
   html += '<div class="evidence-detail-header">';
   html += "<div><h2>" + ev.title + "</h2>";
   html += '<div class="evidence-meta">' + ev.id + " &middot; " + ev.type + " &middot; " + formatDate(ev.timestamp) + "</div></div>";
@@ -288,12 +277,12 @@ function renderEvidenceDetail(ev) {
 
   section.innerHTML = html;
 
-  document.getElementById("detailStatusSelect").addEventListener("change", function (e) {
+  document.getElementById("detailStatusSelect").addEventListener("change", (e) => {
     ev.status = e.target.value; // direct mutation of the loaded evidence object
     renderEvidenceDetail(ev);
     if (state.viewRendered.evidence) renderEvidenceList();
   });
-  document.getElementById("detailRelevanceSelect").addEventListener("change", function (e) {
+  document.getElementById("detailRelevanceSelect").addEventListener("change", (e) => {
     ev.relevance = e.target.value;
     renderEvidenceDetail(ev);
     if (state.viewRendered.evidence) renderEvidenceList();
@@ -301,17 +290,17 @@ function renderEvidenceDetail(ev) {
 }
 
 function statusOptionHTML(current, value, label) {
-  var currentLower = (current || "").toLowerCase();
-  var selected = currentLower === value ? " selected" : "";
+  const currentLower = (current || "").toLowerCase();
+  const selected = currentLower === value ? " selected" : "";
   return '<option value="' + value + '"' + selected + ">" + label + "</option>";
 }
 
 export function saveCurrentNote() {
-  var textarea = document.getElementById("evidenceNoteInput");
+  const textarea = document.getElementById("evidenceNoteInput");
   if (!textarea) return;
-  var evidenceId = textarea.getAttribute("data-evidence-id"); // note id is read back off the DOM
-  var text = textarea.value;
+  const evidenceId = textarea.getAttribute("data-evidence-id"); // note id is read back off the DOM
+  const text = textarea.value;
   saveNoteForEvidence(evidenceId, text);
-  var preview = document.getElementById("notePreview");
+  const preview = document.getElementById("notePreview");
   if (preview) preview.innerHTML = text; // unsafe on purpose, see above
 }

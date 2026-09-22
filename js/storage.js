@@ -6,8 +6,8 @@ export function saveBookmarksToStorage() {
 
 export function loadBookmarksFromStorage() {
   try {
-    var raw = localStorage.getItem(STORAGE_KEY_BOOKMARKS);
-    var parsed = raw ? JSON.parse(raw) : [];
+    const raw = localStorage.getItem(STORAGE_KEY_BOOKMARKS);
+    const parsed = raw ? JSON.parse(raw) : [];
     state.bookmarks = Array.isArray(parsed) ? parsed : [];
   } catch (err) {
     console.warn("Could not read stored bookmarks, starting empty", err);
@@ -25,7 +25,7 @@ export function loadNoteForEvidence(evidenceId) {
 }
 
 export function loadNotesFromStorage() {
-  var raw = localStorage.getItem(STORAGE_KEY_NOTES);
+  const raw = localStorage.getItem(STORAGE_KEY_NOTES);
   if (!raw) {
     state.notesStore = {};
     return;

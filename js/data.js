@@ -5,8 +5,8 @@ import { applyStoredBookmarkFlags, renderEvidenceList } from "./views/evidence.j
 import { renderTimeline } from "./views/timeline.js";
 
 function showLoadingOverlay(msg) {
-  var overlay = document.getElementById("loadingOverlay");
-  var text = document.getElementById("loadingText");
+  const overlay = document.getElementById("loadingOverlay");
+  const text = document.getElementById("loadingText");
   if (text) text.textContent = msg;
   if (overlay) overlay.classList.remove("hidden");
 }
@@ -14,79 +14,75 @@ function showLoadingOverlay(msg) {
 function hideLoadingStep() {
   state.loadingStepsRemaining--;
   if (state.loadingStepsRemaining <= 0) {
-    var overlay = document.getElementById("loadingOverlay");
+    const overlay = document.getElementById("loadingOverlay");
     if (overlay) overlay.classList.add("hidden");
   }
 }
 
-function loadCorePeopleAndLocations() {
-  return fetch("data/case.json").then(function (caseRes) {
-    return caseRes.json().then(function (caseJson) {
-      state.caseData = caseJson;
+// Vorher: sechs Ebenen verschachtelte .then() - fetch -> .json() -> fetch -> .json()
+// -> fetch -> .json(). Die Reihenfolge ist bewusst unveraendert: die drei Requests
+// laufen weiterhin *nacheinander*, nicht parallel. Das Parallelisieren ist Thema
+// einer spaeteren Uebung, hier geht es nur um die Lesbarkeit derselben Ablauffolge.
+async function loadCorePeopleAndLocations() {
+  const caseRes = await fetch("data/case.json");
+  state.caseData = await caseRes.json();
 
-      return fetch("data/people.json").then(function (peopleRes) {
-        return peopleRes.json().then(function (peopleJson) {
-          state.allPeople = peopleJson;
+  const peopleRes = await fetch("data/people.json");
+  state.allPeople = await peopleRes.json();
 
-          return fetch("data/locations.json").then(function (locationsRes) {
-            return locationsRes.json().then(function (locationsJson) {
-              state.allLocations = locationsJson;
+  const locationsRes = await fetch("data/locations.json");
+  state.allLocations = await locationsRes.json();
 
-              hideLoadingStep();
-              renderDashboard();
-              populateAllDropdowns();
-            });
-          });
-        });
-      });
-    });
-  });
+  hideLoadingStep();
+  renderDashboard();
+  populateAllDropdowns();
 }
 
-function loadEvidenceData() {
-  fetch("data/evidence.json")
-    .then(function (res) {
-      return res.json();
-    })
-    .then(function (data) {
-      state.allEvidence = data;
-      applyStoredBookmarkFlags();
-      state.filteredEvidence = state.allEvidence.slice();
-      renderDashboard();
-      populateAllDropdowns();
-      state.evidenceViewLoading = false;
-      if (state.currentPage === "evidence") renderEvidenceList();
-    })
-    .catch(function (err) {
-      console.error("Failed to load evidence.json", err);
-      alert("Evidence could not be loaded. Some views may be incomplete.");
-    });
+async function loadEvidenceData() {
+  try {
+    const res = await fetch("data/evidence.json");
+    const data = await res.json();
+
+    state.allEvidence = data;
+    applyStoredBookmarkFlags();
+    state.filteredEvidence = state.allEvidence.slice();
+    renderDashboard();
+    populateAllDropdowns();
+    state.evidenceViewLoading = false;
+    if (state.currentPage === "evidence") renderEvidenceList();
+  } catch (err) {
+    // entspricht dem frueheren .catch()
+    console.error("Failed to load evidence.json", err);
+    alert("Evidence could not be loaded. Some views may be incomplete.");
+  }
 }
 
-function loadTimelineData() {
-  return fetch("data/timeline.json")
-    .then(function (res) {
-      return res.json();
-    })
-    .then(function (data) {
-      state.allTimeline = data;
-      renderDashboard();
-      if (state.currentPage === "timeline") renderTimeline();
-      populateAllDropdowns();
-    })
-    .catch(function (err) {
-      console.log("timeline load error", err);
-    })
-    .finally(function () {
-      hideLoadingStep();
-    });
+async function loadTimelineData() {
+  try {
+    const res = await fetch("data/timeline.json");
+    const data = await res.json();
+
+    state.allTimeline = data;
+    renderDashboard();
+    if (state.currentPage === "timeline") renderTimeline();
+    populateAllDropdowns();
+  } catch (err) {
+    // entspricht dem frueheren .catch()
+    console.log("timeline load error", err);
+  } finally {
+    // entspricht dem frueheren .finally()
+    hideLoadingStep();
+  }
 }
 
-export function loadAllData() {
-  showLoadingOverlay("Loading case file…");
+export async function loadAllData() {
+  showLoadingOverlay("Loading case file\u2026");
   state.loadingStepsRemaining = 2;
-  return loadCorePeopleAndLocations().then(function () {
-    loadEvidenceData();
-    loadTimelineData();
-  });
+
+  await loadCorePeopleAndLocations();
+
+  // Bewusst ohne await: die beiden wurden auch vorher nur angestossen, nicht
+  // abgewartet - loadAllData() war fertig, sobald der Kern geladen war.
+  loadEvidenceData();
+  loadTimelineData();
 }

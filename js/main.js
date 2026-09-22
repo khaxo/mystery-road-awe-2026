@@ -79,17 +79,16 @@ function setupEventListeners() {
   });
 }
 
-function initApp() {
+async function initApp() {
   loadBookmarksFromStorage();
   loadNotesFromStorage();
   setupEventListeners();
 
-  loadAllData().then(function () {
-    handleHashChange();
-    loadNoteAsync("E01").then(function (firstNote) {
-      console.log("First note preview:", firstNote);
-    });
-  });
+  await loadAllData();
+  handleHashChange();
+
+  const firstNote = await loadNoteAsync("E01");
+  console.log("First note preview:", firstNote);
 }
 
 // Module werden automatisch deferred ausgefuehrt, das DOM steht also bereits.
