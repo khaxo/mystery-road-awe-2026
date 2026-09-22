@@ -88,6 +88,7 @@ function loadEvidenceData() {
       filteredEvidence = allEvidence; 
       renderDashboard();
       populateAllDropdowns();
+      evidenceViewLoading = false;
       if (currentPage === "evidence") renderEvidenceList();
     })
     .catch(function (err) {
