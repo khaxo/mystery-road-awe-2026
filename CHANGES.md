@@ -446,3 +446,162 @@ Die Registrierung steht jetzt einmalig in `setupEventListeners`; das Element
 **Verifikation**
 Nach drei aufeinanderfolgenden `renderEvidenceList()`-Aufrufen loest ein Klick auf eine
 Karte `openEvidenceDetail` genau **einmal** aus.
+
+---
+
+## Demo 1 — Module split
+
+`app.js` (1090 Zeilen, 57 Funktionen, 19 globale `var`s) wurde in **12 native
+ES-Module** zerlegt. Kein Bundler, kein Build-Step — `index.html` laedt den
+Einstiegspunkt direkt mit `<script type="module" src="js/main.js">`.
+
+### Schnitt
+
+| Modul | Zeilen | Inhalt |
+|---|---|---|
+| `js/state.js` | 47 | geteilter veraenderlicher Zustand + `STORAGE_KEY_*`-Konstanten |
+| `js/utils.js` | 63 | Lookups (`findEvidenceById` …), `formatDate`, Badge-Klassen |
+| `js/storage.js` | 41 | alle `localStorage`-Zugriffe |
+| `js/data.js` | 92 | `fetch` der fuenf JSON-Dateien, Lade-Overlay |
+| `js/dropdowns.js` | 9 | `populateAllDropdowns` — Klammer um die drei View-Dropdowns |
+| `js/navigation.js` | 52 | `navigateTo`, `handleHashChange` |
+| `js/views/dashboard.js` | 68 | Dashboard |
+| `js/views/evidence.js` | 317 | Katalog, Filter, Sortierung, Detailansicht, Notizen |
+| `js/views/people.js` | 87 | People- und Locations-Tabs |
+| `js/views/timeline.js` | 128 | Timeline + Quickview-Modal |
+| `js/views/workspace.js` | 134 | Bookmarks, Notizen, Hypothesen-Formular |
+| `js/main.js` | 99 | Einstiegspunkt: Listener verdrahten, `initApp` |
+
+**Begruendung des Schnitts:** primaer nach *Zustaendigkeit*, nicht nach Dateigroesse.
+Die drei Querschnitts-Module (`state`, `utils`, `storage`) haben keine Abhaengigkeit zu
+Views und sind dadurch isoliert testbar. Jede View bekam ein eigenes Modul, weil die
+Views untereinander praktisch nichts teilen — sie beruehren sich nur ueber `state` und
+`navigation`. `main.js` exportiert bewusst **nichts**: es ist Endpunkt des Graphen, nicht
+Knoten.
+
+### Privat vs. exportiert
+
+Nicht alles wurde exportiert. Privat blieben u.a. `statCardHTML` (nur vom Dashboard
+gebraucht), `renderEvidenceCardHTML`, `renderEvidenceDetail`, `statusOptionHTML`,
+`simulateAsyncSearch`, `countEvidenceForPerson`, `renderBookmarksList`, `renderNotesList`
+sowie die Lade-Helfer `showLoadingOverlay`, `hideLoadingStep`,
+`loadCorePeopleAndLocations`, `loadEvidenceData`, `loadTimelineData` — von letzteren ist
+nur `loadAllData` oeffentlich.
+
+Nur `named exports`, kein `default export`. Begruendung: jedes Modul liefert mehrere
+gleichrangige Funktionen; ein `default` haette in keinem Fall einen natuerlichen
+"Hauptexport" markiert, und benannte Importe sind refactoring- und autocomplete-freundlich.
+Der einzige sinnvolle Kandidat waere `state.js` gewesen — dort ist `state` aber bewusst
+benannt, damit an jeder Importstelle sichtbar bleibt, dass es sich um den geteilten
+Zustand handelt.
+
+### Problem 1: Der geteilte Zustand
+
+`allEvidence` und die 15 anderen globalen `var`s waren von ueberall les- **und
+schreibbar**. Ein naives `export let allEvidence` loest das nicht: ein Import ist ein
+*read-only binding*. Lesen geht, aber
+
+    import { allEvidence } from "./state.js";
+    allEvidence = data;        // TypeError: Assignment to constant variable.
+
+Genau dieser Fehler ist nuetzlich: er macht sichtbar, dass eine Zuweisung aus einem
+fremden Modul heraus eine **Fernwirkung** auf einen fremden Zustand ist — frueher ging
+das unbemerkt und von ueberall.
+
+Geloest ueber ein exportiertes Objekt: die Bindung `state` bleibt konstant, veraendert
+werden nur ihre Properties (`state.allEvidence = data`). Jede Schreibstelle ist dadurch
+im Code als solche erkennbar.
+
+### Problem 2: Die 15 Inline-Handler
+
+`index.html` hatte 13 `onclick`/`onchange`-Attribute, `app.js` erzeugte zwei weitere in
+Template-Strings. **Alle 15 haetten mit `type="module"` aufgehoert zu funktionieren**,
+weil Inline-Handler gegen den *globalen* Scope aufgeloest werden und Modul-Top-Level
+nicht global ist — `navigateTo is not defined`.
+
+Zwei Wege standen zur Wahl:
+1. `window.navigateTo = navigateTo` im Einstiegspunkt — minimal, haette aber genau die
+   Globals wieder eingefuehrt, die Demo 8 abschaffen will.
+2. Inline-Handler durch `addEventListener` ersetzen.
+
+Gewaehlt wurde (2). Umsetzung: die fuenf Nav-Buttons ueber ihr vorhandenes
+`data-view`-Attribut, die vier "Go to …"-Buttons ueber ein neues `data-nav-target`,
+`#sortEvidence` / Tabs / Hypothesen-Button ueber ihre IDs. Die zwei Handler in
+Template-Strings wurden zu `data-action="close-detail"` bzw. `data-action="save-note"`
+mit **Event Delegation** auf `#evidenceDetailSection` — noetig, weil diese Buttons bei
+jedem Rendern neu erzeugt werden, der Container aber statisch im HTML steht.
+`index.html` enthaelt jetzt **null** Inline-Handler.
+
+### Weitere Beobachtungen
+
+- `initApp()` wird direkt aufgerufen statt ueber `DOMContentLoaded`. Modul-Skripte werden
+  automatisch *deferred* ausgefuehrt, das DOM steht also bereits — einer der
+  Verhaltensunterschiede zum klassischen `<script>`.
+- Der doppelte `hashchange`-Listener (einmal in `setupEventListeners`, einmal am
+  Dateiende) wurde entfernt. Er war wirkungslos, weil identische Funktionsreferenzen
+  dedupliziert werden, las sich aber wie ein Fehler.
+- `app.js` wurde geloescht. Sie ist vollstaendig ersetzt und ueber
+  `git show 9f51911:app.js` weiterhin erreichbar.
+
+### Verifikation
+
+Nach sauberem Reload: alle 12 Module laden mit 200, alle fuenf Views rendern Inhalt
+(Dashboard 5096, Evidence 12419, People 5096, Timeline 9280 Zeichen). Manuell
+durchgetestet: Navigation ueber Nav-Buttons und "Go to …"-Buttons, Suche (18 -> 7 -> 18
+Treffer), Sortierung, People/Locations-Tabs, Bookmark (landet in `state` **und**
+`localStorage`), Detailansicht oeffnen/schliessen, Notiz speichern, Workspace-Listen,
+Hypothese speichern. `window.navigateTo`, `window.allEvidence` und `window.state` sind
+jetzt erwartungsgemaess `undefined` — die Globals sind weg.
+
+---
+
+### Bug 7 — Die Sortierung funktionierte nur als Nebenwirkung von Bug 5
+
+**Demo-Zuordnung:** Demo 5 (Wechselwirkung zwischen Bugs)
+**Status:** gefixt
+**Entdeckt:** beim Regressionstest nach dem Modul-Split — nicht durch Lesen des Codes.
+
+**Symptom nach dem Bug-5-Fix**
+Das Sortier-Dropdown im Evidence-Katalog hatte **keinerlei Wirkung** mehr. Alle vier
+Kriterien (Titel auf/ab, Datum auf/ab) lieferten dieselbe Reihenfolge.
+
+**Root Cause**
+
+    handleSortChange()                     // sortiert state.filteredEvidence in place
+      -> renderEvidenceList()
+        -> getFilteredEvidence()           // baut results NEU aus state.allEvidence auf
+           state.filteredEvidence = results // und wirft die eben sortierte Liste weg
+
+Die Sortierung wurde also auf ein Array angewendet, das unmittelbar danach verworfen
+wurde. **Solange Bug 5 bestand**, fiel das nicht auf: `filteredEvidence` und
+`allEvidence` waren dasselbe Objekt, das In-place-`sort()` stellte damit auch
+`allEvidence` um, und der Neuaufbau aus `allEvidence` erbte die sortierte Reihenfolge.
+
+Das Feature funktionierte also **ausschliesslich ueber den Mutations-Bug**. Der Fix von
+Bug 5 hat es freigelegt.
+
+Nachgewiesen durch direkten Vergleich im laufenden Programm: mit kuenstlich
+wiederhergestelltem Alias (`state.filteredEvidence = state.allEvidence`) wirkte die
+Sortierung sofort wieder, ohne Alias nicht.
+
+**Fix**
+
+Das Sortierkriterium ist jetzt Teil des Zustands statt eine Eigenschaft des Arrays:
+
+- `state.evidenceSortOrder` (Default `"date-desc"`, passend zur Vorauswahl im `<select>`)
+- `handleSortChange()` schreibt nur noch das Kriterium und rendert neu
+- `getFilteredEvidence()` sortiert `results` **nach** dem Filtern, ueber die neue private
+  Hilfsfunktion `sortEvidenceList(list, sortValue)`
+
+Dadurch ueberlebt die Sortierung jedes Neu-Rendern, und `allEvidence` bleibt unberuehrt.
+
+**Lehre**
+Ein Fix kann ein Feature zum Vorschein bringen, das sich auf den gefixten Bug gestuetzt
+hat. Der Regressionstest nach einem Refactor ist nicht optional — dieser Fehler war
+allein durch Lesen des Codes nicht zu sehen, weil beide Stellen (`handleSortChange` und
+`getFilteredEvidence`) je fuer sich voellig plausibel aussehen.
+
+**Verifikation**
+Vier Sortierkriterien liefern vier verschiedene erste Eintraege. Die Sortierung bleibt
+nach einem Filterwechsel erhalten. `state.allEvidence` steht unveraendert auf
+`E01,E02,E03,…`.
