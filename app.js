@@ -85,7 +85,7 @@ function loadEvidenceData() {
     .then(function (data) {
       allEvidence = data;
       applyStoredBookmarkFlags();
-      filteredEvidence = allEvidence; 
+      filteredEvidence = allEvidence.slice();
       renderDashboard();
       populateAllDropdowns();
       evidenceViewLoading = false;
@@ -389,9 +389,6 @@ function renderEvidenceList() {
     html += renderEvidenceCardHTML(results[i]);
   }
   container.innerHTML = html;
-
-  // Event delegation for card clicks / bookmark button.
-  container.addEventListener("click", handleEvidenceListClick);
 }
 
 
@@ -814,6 +811,24 @@ function openEvidenceModal(evidenceId) {
     modal = document.createElement("div");
     modal.id = "quickViewModal";
     document.body.appendChild(modal);
+
+    // Listener genau einmal registrieren - beim Erzeugen des Modal-Elements.
+    // Vorher hing er an jedem oeffnen neu dran und wurde nie entfernt.
+    modalCloseListenerCount++;
+    console.log("modal close listener attached, active close listeners:", modalCloseListenerCount);
+
+    modal.addEventListener("click", function (e) {
+      if (e.target.classList.contains("modal-close-btn") || e.target.classList.contains("modal-backdrop")) {
+        modal.innerHTML = "";
+      }
+      if (e.target.getAttribute && e.target.getAttribute("data-open-full")) {
+        modal.innerHTML = "";
+        navigateTo("evidence");
+        setTimeout(function () {
+          openEvidenceDetail(e.target.getAttribute("data-open-full"));
+        }, 0);
+      }
+    });
   }
 
   modal.innerHTML =
@@ -825,21 +840,6 @@ function openEvidenceModal(evidenceId) {
     '<button type="button" class="btn btn-primary btn-small" data-open-full="' + ev.id + '">Open full evidence</button>' +
     "</div></div>";
 
-  modalCloseListenerCount++;
-  console.log("modal opened, active close listeners:", modalCloseListenerCount);
-
-  modal.addEventListener("click", function (e) {
-    if (e.target.classList.contains("modal-close-btn") || e.target.classList.contains("modal-backdrop")) {
-      modal.innerHTML = "";
-    }
-    if (e.target.getAttribute && e.target.getAttribute("data-open-full")) {
-      modal.innerHTML = "";
-      navigateTo("evidence");
-      setTimeout(function () {
-        openEvidenceDetail(e.target.getAttribute("data-open-full"));
-      }, 0);
-    }
-  });
 }
 
 // ---------------------------------------------------------------------
@@ -1036,7 +1036,7 @@ function setupEventListeners() {
   window.addEventListener("hashchange", handleHashChange);
 
   var navButtons = document.querySelectorAll(".nav-btn");
-  for (var i = 0; i < navButtons.length; i++) {
+  for (let i = 0; i < navButtons.length; i++) {
     navButtons[i].addEventListener("click", function () {
       var targetView = navButtons[i].getAttribute("data-view");
       console.log("nav clicked:", targetView);
@@ -1045,12 +1045,15 @@ function setupEventListeners() {
 
   document.getElementById("evidenceSearch").addEventListener("input", handleSearchInput);
 
+  // Event delegation fuer Karten-Klicks / Bookmark-Button. Genau einmal registriert -
+  // vorher hing der Listener nach jedem renderEvidenceList() zusaetzlich am Container.
+  document.getElementById("evidenceList").addEventListener("click", handleEvidenceListClick);
+
   document.getElementById("filterType").addEventListener("change", renderEvidenceList);
   document.getElementById("filterPerson").addEventListener("change", renderEvidenceList);
   document.getElementById("filterLocation").addEventListener("change", renderEvidenceList);
 
   document.getElementById("filterStatus").addEventListener("change", renderEvidenceList);
-  document.getElementById("filterStatus").setAttribute("onchange", "renderEvidenceList()");
 
   document.getElementById("filterRelevance").addEventListener("change", renderEvidenceList);
 
@@ -1077,8 +1080,9 @@ function initApp() {
 
   loadAllData().then(function () {
     handleHashChange();
-    var firstNote = loadNoteAsync("E01");
-    console.log("First note preview:", firstNote);
+    loadNoteAsync("E01").then(function (firstNote) {
+      console.log("First note preview:", firstNote);
+    });
   });
 }
 
