@@ -1,8 +1,9 @@
+import { mustEl } from "../dom.js";
 import { state } from "../state.js";
 import { formatDate, getStatusBadgeClass } from "../utils.js";
 
 export function renderDashboard() {
-  const container = document.getElementById("dashboardContent");
+  const container = mustEl("dashboardContent");
   if (!container) return;
 
   let reviewedCount = 0;
@@ -85,7 +86,7 @@ export function renderDashboard() {
   container.innerHTML = html;
 }
 
-const statCardHTML = (value, label) =>
+const statCardHTML = (value: number | string, label: string) =>
   '<div class="stat-card"><div class="stat-value">' +
   value +
   '</div><div class="stat-label">' +

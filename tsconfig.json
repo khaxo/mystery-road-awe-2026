@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+
+    /* Vite uebernimmt das Transpilieren (esbuild). tsc laeuft hier ausschliesslich
+       als Typpruefer - deshalb noEmit. */
+    "noEmit": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+
+    /* Bewusst eingeschaltet. strict buendelt u.a. strictNullChecks,
+       noImplicitAny, strictFunctionTypes und strictPropertyInitialization. */
+    "strict": true,
+
+    /* Zusaetzlich eingeschaltet - findet in diesem Code echte Reste. */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+
+    /* BEWUSST AUS: noUncheckedIndexedAccess.
+       Es wuerde jeden Zugriff arr[i] zu T | undefined machen. Dieser Code
+       durchlaeuft Arrays fast ueberall mit klassischen Indexschleifen, deren
+       Grenzen direkt aus array.length stammen - die Pruefung wuerde also
+       dutzende Stellen anfassen, ohne einen einzigen echten Fehler zu finden.
+       Fuer neu geschriebenen Code mit map/filter/find wuerde ich sie anschalten. */
+    "noUncheckedIndexedAccess": false,
+
+    "skipLibCheck": true
+  },
+  "include": ["js/**/*.ts", "vite.config.js"]
+}

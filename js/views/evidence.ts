@@ -1,4 +1,8 @@
-import { state } from "../state.js";
+import type { Evidence } from "../types.js";
+import type { EvidenceSortOrder } from "../state.js";
+import { isEvidenceRelevance, isEvidenceStatus } from "../types.js";
+import { mustEl, targetOf, targetValue, valueOf } from "../dom.js";
+import { isSortOrder, state } from "../state.js";
 import { loadNoteForEvidence, saveBookmarksToStorage, saveNoteForEvidence } from "../storage.js";
 import {
   evidenceMentionsPerson,
@@ -11,9 +15,9 @@ import {
 } from "../utils.js";
 
 export function populateEvidenceDropdowns() {
-  const typeSelect = document.getElementById("filterType");
-  const personSelect = document.getElementById("filterPerson");
-  const locationSelect = document.getElementById("filterLocation");
+  const typeSelect = mustEl("filterType");
+  const personSelect = mustEl("filterPerson");
+  const locationSelect = mustEl("filterLocation");
   if (!typeSelect || !personSelect || !locationSelect) return;
 
   const types = [];
@@ -46,13 +50,13 @@ export function populateEvidenceDropdowns() {
 }
 
 export function getFilteredEvidence() {
-  const searchBox = document.getElementById("evidenceSearch");
+  const searchBox = mustEl<HTMLInputElement>("evidenceSearch");
   const searchTerm = searchBox ? searchBox.value.toLowerCase().trim() : "";
-  const typeVal = document.getElementById("filterType").value;
-  const personVal = document.getElementById("filterPerson").value;
-  const locationVal = document.getElementById("filterLocation").value;
-  const statusVal = document.getElementById("filterStatus").value;
-  const relevanceVal = document.getElementById("filterRelevance").value;
+  const typeVal = valueOf("filterType");
+  const personVal = valueOf("filterPerson");
+  const locationVal = valueOf("filterLocation");
+  const statusVal = valueOf("filterStatus");
+  const relevanceVal = valueOf("filterRelevance");
 
   const results = [];
   for (let i = 0; i < state.allEvidence.length; i++) {
@@ -84,24 +88,30 @@ export function getFilteredEvidence() {
 
 // Sortiert die uebergebene Liste in place. Privat - nur getFilteredEvidence und
 // handleSortChange brauchen das.
-function sortEvidenceList(list, sortValue) {
+function sortEvidenceList(list: Evidence[], sortValue: EvidenceSortOrder) {
   if (sortValue === "title-asc") {
-    list.sort((a, b) => a.title.localeCompare(b.title));
+    list.sort((a: Evidence, b: Evidence) => a.title.localeCompare(b.title));
   } else if (sortValue === "title-desc") {
-    list.sort((a, b) => b.title.localeCompare(a.title));
+    list.sort((a: Evidence, b: Evidence) => b.title.localeCompare(a.title));
   } else if (sortValue === "date-asc") {
-    list.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    list.sort(
+      (a: Evidence, b: Evidence) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
   } else {
-    list.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    list.sort(
+      (a: Evidence, b: Evidence) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
   }
   return list;
 }
 
 export function renderEvidenceList() {
-  const container = document.getElementById("evidenceList");
+  const container = mustEl("evidenceList");
   if (!container) return;
 
-  const loadingIndicator = document.getElementById("evidenceLoadingIndicator");
+  const loadingIndicator = mustEl("evidenceLoadingIndicator");
   if (state.evidenceViewLoading) {
     if (loadingIndicator) loadingIndicator.classList.remove("hidden");
     container.innerHTML = "";
@@ -121,7 +131,7 @@ export function renderEvidenceList() {
   container.innerHTML = html;
 }
 
-function renderEvidenceCardHTML(ev) {
+function renderEvidenceCardHTML(ev: Evidence) {
   const isBookmarked = state.bookmarks.indexOf(ev.id) !== -1;
   let html = '<div class="evidence-card" data-id="' + ev.id + '">';
   html +=
@@ -160,22 +170,25 @@ function renderEvidenceCardHTML(ev) {
   return html;
 }
 
-export function handleEvidenceListClick(event) {
-  const target = event.target;
+export function handleEvidenceListClick(event: Event) {
+  const target = targetOf(event);
+  if (!target) return;
 
-  if (target.dataset && target.dataset.action === "bookmark") {
+  if (target.dataset.action === "bookmark") {
     event.stopPropagation();
-    handleBookmarkClick(target.dataset.id);
+    const id = target.dataset.id;
+    if (id) handleBookmarkClick(id);
     return;
   }
 
   const card = target.closest(".evidence-card");
   if (card) {
-    openEvidenceDetail(card.getAttribute("data-id"));
+    const id = card.getAttribute("data-id");
+    if (id) openEvidenceDetail(id);
   }
 }
 
-function handleBookmarkClick(evidenceId) {
+function handleBookmarkClick(evidenceId: string) {
   const ev = findEvidenceById(evidenceId);
   if (!ev) return;
 
@@ -199,25 +212,28 @@ export function applyStoredBookmarkFlags() {
 }
 
 export function handleSortChange() {
-  state.evidenceSortOrder = document.getElementById("sortEvidence").value;
+  const gewaehlt = valueOf("sortEvidence");
+  // <option value> ist fuer TypeScript ein beliebiger string. Der Guard ist die
+  // einzige Stelle, an der daraus ein EvidenceSortOrder wird.
+  if (isSortOrder(gewaehlt)) state.evidenceSortOrder = gewaehlt;
   renderEvidenceList();
 }
 
 export function clearFilters() {
-  document.getElementById("evidenceSearch").value = "";
-  document.getElementById("filterType").value = "";
-  document.getElementById("filterPerson").value = "";
-  document.getElementById("filterLocation").value = "";
-  document.getElementById("filterStatus").value = "";
-  document.getElementById("filterRelevance").value = "";
+  mustEl<HTMLInputElement>("evidenceSearch").value = "";
+  mustEl<HTMLInputElement>("filterType").value = "";
+  mustEl<HTMLInputElement>("filterPerson").value = "";
+  mustEl<HTMLInputElement>("filterLocation").value = "";
+  mustEl<HTMLInputElement>("filterStatus").value = "";
+  mustEl<HTMLInputElement>("filterRelevance").value = "";
   renderEvidenceList();
 }
 
-const simulateAsyncSearch = (term) =>
+const simulateAsyncSearch = (term: string): Promise<string> =>
   new Promise((resolve) => setTimeout(() => resolve(term), 300));
 
-export async function handleSearchInput(event) {
-  const term = event.target.value;
+export async function handleSearchInput(event: Event) {
+  const term = targetValue(event);
   const requestId = ++state.latestSearchRequestId;
 
   await simulateAsyncSearch(term);
@@ -229,12 +245,12 @@ export async function handleSearchInput(event) {
   renderEvidenceList();
 }
 
-export function openEvidenceDetail(evidenceId) {
+export function openEvidenceDetail(evidenceId: string) {
   const ev = findEvidenceById(evidenceId);
   if (!ev) return;
   state.selectedEvidence = ev;
 
-  const section = document.getElementById("evidenceDetailSection");
+  const section = mustEl("evidenceDetailSection");
   section.classList.remove("hidden");
 
   renderEvidenceDetail(ev);
@@ -242,14 +258,14 @@ export function openEvidenceDetail(evidenceId) {
 }
 
 export function closeEvidenceDetail() {
-  const section = document.getElementById("evidenceDetailSection");
+  const section = mustEl("evidenceDetailSection");
   section.classList.add("hidden");
   section.innerHTML = "";
   state.selectedEvidence = null;
 }
 
-function renderEvidenceDetail(ev) {
-  const section = document.getElementById("evidenceDetailSection");
+function renderEvidenceDetail(ev: Evidence) {
+  const section = mustEl("evidenceDetailSection");
 
   const personNames = [];
   for (let p = 0; p < ev.personIds.length; p++) {
@@ -331,30 +347,33 @@ function renderEvidenceDetail(ev) {
 
   section.innerHTML = html;
 
-  document.getElementById("detailStatusSelect").addEventListener("change", (e) => {
-    ev.status = e.target.value; // direct mutation of the loaded evidence object
+  mustEl("detailStatusSelect").addEventListener("change", (e: Event) => {
+    const neu = targetValue(e);
+    if (isEvidenceStatus(neu)) ev.status = neu; // direct mutation of the loaded evidence object
     renderEvidenceDetail(ev);
     if (state.viewRendered.evidence) renderEvidenceList();
   });
-  document.getElementById("detailRelevanceSelect").addEventListener("change", (e) => {
-    ev.relevance = e.target.value;
+  mustEl("detailRelevanceSelect").addEventListener("change", (e: Event) => {
+    const neu = targetValue(e);
+    if (isEvidenceRelevance(neu)) ev.relevance = neu;
     renderEvidenceDetail(ev);
     if (state.viewRendered.evidence) renderEvidenceList();
   });
 }
 
-function statusOptionHTML(current, value, label) {
+function statusOptionHTML(current: string, value: string, label: string) {
   const currentLower = (current || "").toLowerCase();
   const selected = currentLower === value ? " selected" : "";
   return '<option value="' + value + '"' + selected + ">" + label + "</option>";
 }
 
 export function saveCurrentNote() {
-  const textarea = document.getElementById("evidenceNoteInput");
+  const textarea = mustEl<HTMLTextAreaElement>("evidenceNoteInput");
   if (!textarea) return;
   const evidenceId = textarea.getAttribute("data-evidence-id"); // note id is read back off the DOM
+  if (!evidenceId) return;
   const text = textarea.value;
   saveNoteForEvidence(evidenceId, text);
-  const preview = document.getElementById("notePreview");
+  const preview = mustEl("notePreview");
   if (preview) preview.innerHTML = text; // unsafe on purpose, see above
 }

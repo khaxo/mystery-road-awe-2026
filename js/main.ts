@@ -1,3 +1,5 @@
+import { isViewName } from "./state.js";
+import { mustEl, targetOf, targetValue } from "./dom.js";
 // Einstiegspunkt. Verdrahtet beim Start alle Event-Listener und stoesst das
 // Laden der Falldaten an. Exportiert bewusst nichts - dieses Modul wird nur
 // von index.html geladen, niemand importiert daraus.
@@ -30,56 +32,57 @@ function setupEventListeners() {
     button.addEventListener("click", () => {
       const targetView = button.getAttribute("data-view");
       console.log("nav clicked:", targetView);
-      navigateTo(targetView);
+      // data-view kommt aus dem HTML und ist damit string | null. isViewName ist
+      // die Stelle, an der daraus ein gueltiger ViewName wird - oder eben nicht.
+      if (isViewName(targetView)) navigateTo(targetView);
     });
   }
 
   for (const button of document.querySelectorAll("[data-nav-target]")) {
-    button.addEventListener("click", () => navigateTo(button.getAttribute("data-nav-target")));
+    button.addEventListener("click", () => {
+      const ziel = button.getAttribute("data-nav-target");
+      if (isViewName(ziel)) navigateTo(ziel);
+    });
   }
 
   // Evidence
-  document.getElementById("evidenceSearch").addEventListener("input", handleSearchInput);
+  mustEl("evidenceSearch").addEventListener("input", handleSearchInput);
 
   // Event delegation fuer Karten-Klicks / Bookmark-Button. Genau einmal registriert -
   // vorher hing der Listener nach jedem renderEvidenceList() zusaetzlich am Container.
-  document.getElementById("evidenceList").addEventListener("click", handleEvidenceListClick);
+  mustEl("evidenceList").addEventListener("click", handleEvidenceListClick);
 
-  document.getElementById("filterType").addEventListener("change", renderEvidenceList);
-  document.getElementById("filterPerson").addEventListener("change", renderEvidenceList);
-  document.getElementById("filterLocation").addEventListener("change", renderEvidenceList);
-  document.getElementById("filterStatus").addEventListener("change", renderEvidenceList);
-  document.getElementById("filterRelevance").addEventListener("change", renderEvidenceList);
+  mustEl("filterType").addEventListener("change", renderEvidenceList);
+  mustEl("filterPerson").addEventListener("change", renderEvidenceList);
+  mustEl("filterLocation").addEventListener("change", renderEvidenceList);
+  mustEl("filterStatus").addEventListener("change", renderEvidenceList);
+  mustEl("filterRelevance").addEventListener("change", renderEvidenceList);
 
-  document.getElementById("sortEvidence").addEventListener("change", handleSortChange);
-  document.getElementById("clearFiltersBtn").addEventListener("click", clearFilters);
+  mustEl("sortEvidence").addEventListener("change", handleSortChange);
+  mustEl("clearFiltersBtn").addEventListener("click", clearFilters);
 
   // Die Detailansicht wird per innerHTML neu aufgebaut, ihre Buttons existieren
   // also noch nicht. Delegation auf den Container, der statisch im HTML steht.
-  document.getElementById("evidenceDetailSection").addEventListener("click", (e) => {
-    const action = e.target.getAttribute && e.target.getAttribute("data-action");
+  mustEl("evidenceDetailSection").addEventListener("click", (e: Event) => {
+    const action = targetOf(e)?.getAttribute && targetOf(e)?.getAttribute("data-action");
     if (action === "close-detail") closeEvidenceDetail();
     if (action === "save-note") saveCurrentNote();
   });
 
   // People & Locations
-  document
-    .getElementById("tabPeopleBtn")
-    .addEventListener("click", () => switchPeopleTab("people"));
-  document
-    .getElementById("tabLocationsBtn")
-    .addEventListener("click", () => switchPeopleTab("locations"));
+  mustEl("tabPeopleBtn").addEventListener("click", () => switchPeopleTab("people"));
+  mustEl("tabLocationsBtn").addEventListener("click", () => switchPeopleTab("locations"));
 
   // Timeline
-  document.getElementById("timelineOrder").addEventListener("change", renderTimeline);
-  document.getElementById("timelinePersonFilter").addEventListener("change", renderTimeline);
-  document.getElementById("timelineLocationFilter").addEventListener("change", renderTimeline);
-  document.getElementById("timelineTypeFilter").addEventListener("change", renderTimeline);
+  mustEl("timelineOrder").addEventListener("change", renderTimeline);
+  mustEl("timelinePersonFilter").addEventListener("change", renderTimeline);
+  mustEl("timelineLocationFilter").addEventListener("change", renderTimeline);
+  mustEl("timelineTypeFilter").addEventListener("change", renderTimeline);
 
   // Workspace
-  document.getElementById("saveHypothesisBtn").addEventListener("click", saveHypothesis);
-  document.getElementById("hypConfidence").addEventListener("input", (e) => {
-    document.getElementById("hypConfidenceValue").textContent = e.target.value;
+  mustEl("saveHypothesisBtn").addEventListener("click", saveHypothesis);
+  mustEl("hypConfidence").addEventListener("input", (e: Event) => {
+    mustEl("hypConfidenceValue").textContent = targetValue(e);
   });
 }
 

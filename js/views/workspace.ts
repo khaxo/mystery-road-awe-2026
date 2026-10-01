@@ -1,3 +1,4 @@
+import { mustEl, targetOf, valueOf } from "../dom.js";
 import { navigateTo } from "../navigation.js";
 import { STORAGE_KEY_HYPOTHESIS, state } from "../state.js";
 import { getSelectedOptions } from "../utils.js";
@@ -11,7 +12,7 @@ export function renderWorkspace() {
 }
 
 function renderBookmarksList() {
-  const container = document.getElementById("bookmarksList");
+  const container = mustEl("bookmarksList");
   if (!container) return;
 
   const bookmarkedItems = state.allEvidence.filter(function (ev) {
@@ -40,18 +41,17 @@ function renderBookmarksList() {
 
   const openButtons = container.querySelectorAll("[data-open-evidence]");
   for (let b = 0; b < openButtons.length; b++) {
-    openButtons[b].addEventListener("click", (e) => {
+    openButtons[b].addEventListener("click", (e: Event) => {
       navigateTo("evidence");
-      const id = e.target.getAttribute("data-open-evidence");
-      setTimeout(function () {
-        openEvidenceDetail(id);
-      }, 0);
+      const id = targetOf(e)?.getAttribute("data-open-evidence");
+      if (!id) return;
+      setTimeout(() => openEvidenceDetail(id), 0);
     });
   }
 }
 
 function renderNotesList() {
-  const container = document.getElementById("notesList");
+  const container = mustEl("notesList");
   if (!container) return;
 
   const noteEntries = [];
@@ -86,8 +86,8 @@ function renderNotesList() {
 }
 
 export function populateHypothesisDropdowns() {
-  const suspectSelect = document.getElementById("hypSuspect");
-  const evidenceSelect = document.getElementById("hypEvidence");
+  const suspectSelect = mustEl<HTMLSelectElement>("hypSuspect");
+  const evidenceSelect = mustEl<HTMLSelectElement>("hypEvidence");
   if (!suspectSelect || !evidenceSelect) return;
 
   const currentSuspect = suspectSelect.value;
@@ -113,12 +113,12 @@ export function populateHypothesisDropdowns() {
 
 export function saveHypothesis() {
   const draft = {
-    suspectId: document.getElementById("hypSuspect").value,
-    nature: document.getElementById("hypNature").value,
-    evidenceIds: getSelectedOptions(document.getElementById("hypEvidence")),
-    confidence: document.getElementById("hypConfidence").value,
-    explanation: document.getElementById("hypExplanation").value,
-    alternative: document.getElementById("hypAlternative").value,
+    suspectId: valueOf("hypSuspect"),
+    nature: valueOf("hypNature"),
+    evidenceIds: getSelectedOptions(mustEl("hypEvidence")),
+    confidence: valueOf("hypConfidence"),
+    explanation: valueOf("hypExplanation"),
+    alternative: valueOf("hypAlternative"),
     savedAt: new Date().toISOString()
   };
 
@@ -130,7 +130,7 @@ export function saveHypothesis() {
     return;
   }
 
-  const msg = document.getElementById("hypothesisSavedMsg");
+  const msg = mustEl("hypothesisSavedMsg");
   msg.classList.remove("hidden");
   setTimeout(function () {
     msg.classList.add("hidden");
@@ -143,14 +143,14 @@ export function loadHypothesisFromStorage() {
 
   const draft = JSON.parse(raw);
 
-  document.getElementById("hypSuspect").value = draft.suspectId || "";
-  document.getElementById("hypNature").value = draft.nature || "";
-  document.getElementById("hypConfidence").value = draft.confidence || 50;
-  document.getElementById("hypConfidenceValue").textContent = draft.confidence || 50;
-  document.getElementById("hypExplanation").value = draft.explanation || "";
-  document.getElementById("hypAlternative").value = draft.alternative || "";
+  mustEl<HTMLInputElement>("hypSuspect").value = draft.suspectId || "";
+  mustEl<HTMLInputElement>("hypNature").value = draft.nature || "";
+  mustEl<HTMLInputElement>("hypConfidence").value = draft.confidence || 50;
+  mustEl("hypConfidenceValue").textContent = draft.confidence || 50;
+  mustEl<HTMLInputElement>("hypExplanation").value = draft.explanation || "";
+  mustEl<HTMLInputElement>("hypAlternative").value = draft.alternative || "";
 
-  const evidenceSelect = document.getElementById("hypEvidence");
+  const evidenceSelect = mustEl<HTMLSelectElement>("hypEvidence");
   const savedIds = draft.evidenceIds || [];
   for (let i = 0; i < evidenceSelect.options.length; i++) {
     evidenceSelect.options[i].selected = savedIds.indexOf(evidenceSelect.options[i].value) !== -1;
