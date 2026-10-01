@@ -1,3 +1,4 @@
+import { istHypothesis } from "../types.js";
 import { mustEl, targetOf, valueOf } from "../dom.js";
 import { navigateTo } from "../navigation.js";
 import { STORAGE_KEY_HYPOTHESIS, state } from "../state.js";
@@ -26,8 +27,8 @@ function renderBookmarksList() {
   }
 
   let html = "";
-  for (let i = 0; i < bookmarkedItems.length; i++) {
-    const ev = bookmarkedItems[i];
+  for (const eintrag of bookmarkedItems) {
+    const ev = eintrag;
     html +=
       '<div class="mini-list-item"><strong>' +
       ev.id +
@@ -40,8 +41,8 @@ function renderBookmarksList() {
   container.innerHTML = html;
 
   const openButtons = container.querySelectorAll("[data-open-evidence]");
-  for (let b = 0; b < openButtons.length; b++) {
-    openButtons[b].addEventListener("click", (e: Event) => {
+  for (const eintrag of openButtons) {
+    eintrag.addEventListener("click", (e: Event) => {
       navigateTo("evidence");
       const id = targetOf(e)?.getAttribute("data-open-evidence");
       if (!id) return;
@@ -73,8 +74,8 @@ function renderNotesList() {
   }
 
   let html = "";
-  for (let n = 0; n < noteEntries.length; n++) {
-    const entry = noteEntries[n];
+  for (const eintrag of noteEntries) {
+    const entry = eintrag;
     html +=
       '<div class="mini-list-item"><strong>' +
       entry.evidenceId +
@@ -92,22 +93,15 @@ export function populateHypothesisDropdowns() {
 
   const currentSuspect = suspectSelect.value;
   suspectSelect.innerHTML = '<option value="">Select a person…</option>';
-  for (let p = 0; p < state.allPeople.length; p++) {
-    suspectSelect.innerHTML +=
-      '<option value="' + state.allPeople[p].id + '">' + state.allPeople[p].name + "</option>";
+  for (const eintrag of state.allPeople) {
+    suspectSelect.innerHTML += '<option value="' + eintrag.id + '">' + eintrag.name + "</option>";
   }
   suspectSelect.value = currentSuspect;
 
   evidenceSelect.innerHTML = "";
-  for (let i = 0; i < state.allEvidence.length; i++) {
+  for (const eintrag of state.allEvidence) {
     evidenceSelect.innerHTML +=
-      '<option value="' +
-      state.allEvidence[i].id +
-      '">' +
-      state.allEvidence[i].id +
-      " - " +
-      state.allEvidence[i].title +
-      "</option>";
+      '<option value="' + eintrag.id + '">' + eintrag.id + " - " + eintrag.title + "</option>";
   }
 }
 
@@ -141,18 +135,28 @@ export function loadHypothesisFromStorage() {
   const raw = localStorage.getItem(STORAGE_KEY_HYPOTHESIS);
   if (!raw) return;
 
-  const draft = JSON.parse(raw);
+  let geparst: unknown;
+  try {
+    geparst = JSON.parse(raw);
+  } catch (err) {
+    console.warn("Could not read stored hypothesis, ignoring it", err);
+    return;
+  }
+  if (!istHypothesis(geparst)) return;
+  const draft = geparst;
 
-  mustEl<HTMLInputElement>("hypSuspect").value = draft.suspectId || "";
-  mustEl<HTMLInputElement>("hypNature").value = draft.nature || "";
-  mustEl<HTMLInputElement>("hypConfidence").value = draft.confidence || 50;
-  mustEl("hypConfidenceValue").textContent = draft.confidence || 50;
-  mustEl<HTMLInputElement>("hypExplanation").value = draft.explanation || "";
-  mustEl<HTMLInputElement>("hypAlternative").value = draft.alternative || "";
+  // ?? statt ||: "" und "0" sind gueltige Werte. Mit || haette ein Benutzer,
+  // der die Confidence auf 0 stellt, nach dem Neuladen wieder 50 vorgefunden.
+  mustEl<HTMLInputElement>("hypSuspect").value = draft.suspectId ?? "";
+  mustEl<HTMLInputElement>("hypNature").value = draft.nature ?? "";
+  mustEl<HTMLInputElement>("hypConfidence").value = draft.confidence ?? "50";
+  mustEl("hypConfidenceValue").textContent = draft.confidence ?? "50";
+  mustEl<HTMLInputElement>("hypExplanation").value = draft.explanation ?? "";
+  mustEl<HTMLInputElement>("hypAlternative").value = draft.alternative ?? "";
 
   const evidenceSelect = mustEl<HTMLSelectElement>("hypEvidence");
-  const savedIds = draft.evidenceIds || [];
-  for (let i = 0; i < evidenceSelect.options.length; i++) {
-    evidenceSelect.options[i].selected = savedIds.indexOf(evidenceSelect.options[i].value) !== -1;
+  const savedIds = draft.evidenceIds ?? [];
+  for (const option of evidenceSelect.options) {
+    option.selected = savedIds.includes(option.value);
   }
 }

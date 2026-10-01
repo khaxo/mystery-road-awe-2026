@@ -20,32 +20,25 @@ export function populateEvidenceDropdowns() {
   const locationSelect = mustEl("filterLocation");
   if (!typeSelect || !personSelect || !locationSelect) return;
 
-  const types = [];
-  for (let i = 0; i < state.allEvidence.length; i++) {
-    const t = state.allEvidence[i].type.toLowerCase();
-    if (types.indexOf(t) === -1) types.push(t);
+  const types: string[] = [];
+  for (const eintrag of state.allEvidence) {
+    const t = eintrag.type.toLowerCase();
+    if (!types.includes(t)) types.push(t);
   }
   typeSelect.innerHTML = '<option value="">All types</option>';
-  for (let ti = 0; ti < types.length; ti++) {
-    typeSelect.innerHTML += '<option value="' + types[ti] + '">' + types[ti] + "</option>";
+  for (const eintrag of types) {
+    typeSelect.innerHTML += '<option value="' + eintrag + '">' + eintrag + "</option>";
   }
 
   personSelect.innerHTML = '<option value="">All people</option>';
-  for (let p = 0; p < state.allPeople.length; p++) {
-    personSelect.innerHTML +=
-      '<option value="' + state.allPeople[p].id + '">' + state.allPeople[p].name + "</option>";
+  for (const eintrag of state.allPeople) {
+    personSelect.innerHTML += '<option value="' + eintrag.id + '">' + eintrag.name + "</option>";
   }
 
   locationSelect.innerHTML = '<option value="">All locations</option>';
-  for (let l = 0; l < state.allLocations.length; l++) {
+  for (const eintrag of state.allLocations) {
     locationSelect.innerHTML +=
-      '<option value="' +
-      state.allLocations[l].id +
-      '">' +
-      state.allLocations[l].id +
-      " - " +
-      state.allLocations[l].name +
-      "</option>";
+      '<option value="' + eintrag.id + '">' + eintrag.id + " - " + eintrag.name + "</option>";
   }
 }
 
@@ -59,20 +52,20 @@ export function getFilteredEvidence() {
   const relevanceVal = valueOf("filterRelevance");
 
   const results = [];
-  for (let i = 0; i < state.allEvidence.length; i++) {
-    const item = state.allEvidence[i];
+  for (const eintrag of state.allEvidence) {
+    const item = eintrag;
     let matches = true;
 
     if (searchTerm) {
       const haystack = (item.title + " " + item.summary + " " + item.tags.join(" ")).toLowerCase();
-      if (haystack.indexOf(searchTerm) === -1) matches = false;
+      if (!haystack.includes(searchTerm)) matches = false;
     }
     if (matches && typeVal && item.type.toLowerCase() !== typeVal) matches = false;
     if (matches && personVal) {
       const person = findPersonById(personVal);
       if (!person || !evidenceMentionsPerson(item, person)) matches = false;
     }
-    if (matches && locationVal && item.locationIds.indexOf(locationVal) === -1) matches = false;
+    if (matches && locationVal && !item.locationIds.includes(locationVal)) matches = false;
     if (matches && statusVal && (item.status || "").toLowerCase() !== statusVal) matches = false;
     if (matches && relevanceVal && (item.relevance || "").toLowerCase() !== relevanceVal)
       matches = false;
@@ -125,14 +118,14 @@ export function renderEvidenceList() {
   if (results.length === 0) {
     html = "<p>No evidence matches the current filters.</p>";
   }
-  for (let i = 0; i < results.length; i++) {
-    html += renderEvidenceCardHTML(results[i]);
+  for (const eintrag of results) {
+    html += renderEvidenceCardHTML(eintrag);
   }
   container.innerHTML = html;
 }
 
 function renderEvidenceCardHTML(ev: Evidence) {
-  const isBookmarked = state.bookmarks.indexOf(ev.id) !== -1;
+  const isBookmarked = state.bookmarks.includes(ev.id);
   let html = '<div class="evidence-card" data-id="' + ev.id + '">';
   html +=
     '<button class="bookmark-btn ' +
@@ -155,15 +148,15 @@ function renderEvidenceCardHTML(ev: Evidence) {
     "</div>";
   html += '<div class="evidence-summary">' + ev.summary + "</div>";
 
-  if (ev.tags.indexOf("critical") !== -1) {
+  if (ev.tags.includes("critical")) {
     html += '<span class="badge badge-critical">Critical</span>';
   }
   html += '<span class="badge ' + getStatusBadgeClass(ev.status) + '">' + ev.status + "</span>";
   html +=
     '<span class="badge ' + getRelevanceBadgeClass(ev.relevance) + '">' + ev.relevance + "</span>";
   html += "<div>";
-  for (let t = 0; t < ev.tags.length; t++) {
-    html += '<span class="tag-chip">' + ev.tags[t] + "</span>";
+  for (const eintrag of ev.tags) {
+    html += '<span class="tag-chip">' + eintrag + "</span>";
   }
   html += "</div>";
   html += "</div>";
@@ -192,7 +185,7 @@ function handleBookmarkClick(evidenceId: string) {
   const ev = findEvidenceById(evidenceId);
   if (!ev) return;
 
-  if (state.bookmarks.indexOf(evidenceId) === -1) {
+  if (!state.bookmarks.includes(evidenceId)) {
     state.bookmarks.push(evidenceId);
     ev.bookmarked = true;
   } else {
@@ -206,8 +199,8 @@ function handleBookmarkClick(evidenceId: string) {
 }
 
 export function applyStoredBookmarkFlags() {
-  for (let i = 0; i < state.allEvidence.length; i++) {
-    state.allEvidence[i].bookmarked = state.bookmarks.indexOf(state.allEvidence[i].id) !== -1;
+  for (const eintrag of state.allEvidence) {
+    eintrag.bookmarked = state.bookmarks.includes(eintrag.id);
   }
 }
 
@@ -268,20 +261,20 @@ function renderEvidenceDetail(ev: Evidence) {
   const section = mustEl("evidenceDetailSection");
 
   const personNames = [];
-  for (let p = 0; p < ev.personIds.length; p++) {
-    const person = findPersonById(ev.personIds[p]);
-    personNames.push(person ? person.name : ev.personIds[p]);
+  for (const eintrag of ev.personIds) {
+    const person = findPersonById(eintrag);
+    personNames.push(person ? person.name : eintrag);
   }
 
   const locationNames = [];
-  for (let l = 0; l < ev.locationIds.length; l++) {
-    const loc = findLocationById(ev.locationIds[l]);
-    locationNames.push(loc ? loc.id + " - " + loc.name : ev.locationIds[l]);
+  for (const eintrag of ev.locationIds) {
+    const loc = findLocationById(eintrag);
+    locationNames.push(loc ? loc.id + " - " + loc.name : eintrag);
   }
 
   let tagsHtml = "";
-  for (let t = 0; t < ev.tags.length; t++) {
-    tagsHtml += '<span class="tag-chip">' + ev.tags[t] + "</span>";
+  for (const eintrag of ev.tags) {
+    tagsHtml += '<span class="tag-chip">' + eintrag + "</span>";
   }
 
   const storedNote = loadNoteForEvidence(ev.id);
@@ -301,7 +294,7 @@ function renderEvidenceDetail(ev: Evidence) {
     '<button type="button" class="btn btn-secondary btn-small" data-action="close-detail">Close</button>';
   html += "</div>";
 
-  if (ev.tags.indexOf("critical") !== -1) {
+  if (ev.tags.includes("critical")) {
     html += '<div class="warning-banner">This item is tagged as critical evidence.</div>';
   }
 

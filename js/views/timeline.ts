@@ -11,24 +11,22 @@ export function populateTimelineDropdowns() {
   if (!personSelect || !locationSelect || !typeSelect) return;
 
   personSelect.innerHTML = '<option value="">All people</option>';
-  for (let p = 0; p < state.allPeople.length; p++) {
-    personSelect.innerHTML +=
-      '<option value="' + state.allPeople[p].id + '">' + state.allPeople[p].name + "</option>";
+  for (const eintrag of state.allPeople) {
+    personSelect.innerHTML += '<option value="' + eintrag.id + '">' + eintrag.name + "</option>";
   }
 
   locationSelect.innerHTML = '<option value="">All locations</option>';
-  for (let l = 0; l < state.allLocations.length; l++) {
-    locationSelect.innerHTML +=
-      '<option value="' + state.allLocations[l].id + '">' + state.allLocations[l].id + "</option>";
+  for (const eintrag of state.allLocations) {
+    locationSelect.innerHTML += '<option value="' + eintrag.id + '">' + eintrag.id + "</option>";
   }
 
-  const types = [];
-  for (let i = 0; i < state.allTimeline.length; i++) {
-    if (types.indexOf(state.allTimeline[i].type) === -1) types.push(state.allTimeline[i].type);
+  const types: string[] = [];
+  for (const eintrag of state.allTimeline) {
+    if (!types.includes(eintrag.type)) types.push(eintrag.type);
   }
   typeSelect.innerHTML = '<option value="">All event types</option>';
-  for (let t = 0; t < types.length; t++) {
-    typeSelect.innerHTML += '<option value="' + types[t] + '">' + types[t] + "</option>";
+  for (const eintrag of types) {
+    typeSelect.innerHTML += '<option value="' + eintrag + '">' + eintrag + "</option>";
   }
 }
 
@@ -42,10 +40,10 @@ export function renderTimeline() {
   const typeFilter = valueOf("timelineTypeFilter");
 
   let events = [];
-  for (let i = 0; i < state.allTimeline.length; i++) {
-    const evt = state.allTimeline[i];
-    if (personFilter && evt.personIds.indexOf(personFilter) === -1) continue;
-    if (locationFilter && evt.locationIds.indexOf(locationFilter) === -1) continue;
+  for (const eintrag of state.allTimeline) {
+    const evt = eintrag;
+    if (personFilter && !evt.personIds.includes(personFilter)) continue;
+    if (locationFilter && !evt.locationIds.includes(locationFilter)) continue;
     if (typeFilter && evt.type !== typeFilter) continue;
     events.push(evt);
   }
@@ -56,8 +54,8 @@ export function renderTimeline() {
   });
 
   let html = "";
-  for (let e = 0; e < events.length; e++) {
-    const item = events[e];
+  for (const eintrag of events) {
+    const item = eintrag;
     html += '<div class="timeline-event certainty-' + item.certainty + '">';
     html +=
       '<div class="timeline-time">' +
@@ -70,21 +68,21 @@ export function renderTimeline() {
     html += "<h3>" + item.title + "</h3>";
     html += "<p>" + item.description + "</p>";
 
-    const eventLocationNames = [];
-    for (let el = 0; el < item.locationIds.length; el++) {
-      const evtLoc = findLocationById(item.locationIds[el]);
-      eventLocationNames.push(evtLoc || item.locationIds[el]);
+    const eventLocationNames: string[] = [];
+    for (const eintrag of item.locationIds) {
+      const evtLoc = findLocationById(eintrag);
+      eventLocationNames.push(evtLoc ? evtLoc.name : eintrag);
     }
     if (eventLocationNames.length > 0) {
       html += '<p class="evidence-meta">Location: ' + eventLocationNames.join(", ") + "</p>";
     }
 
-    for (let ev2 = 0; ev2 < item.evidenceIds.length; ev2++) {
+    for (const eintrag of item.evidenceIds) {
       html +=
         '<button type="button" class="evidence-link-btn" data-evidence-id="' +
-        item.evidenceIds[ev2] +
+        eintrag +
         '">View ' +
-        item.evidenceIds[ev2] +
+        eintrag +
         "</button>";
     }
     html += "</div>";
@@ -95,8 +93,8 @@ export function renderTimeline() {
   container.innerHTML = html;
 
   const linkButtons = container.querySelectorAll(".evidence-link-btn");
-  for (let b = 0; b < linkButtons.length; b++) {
-    linkButtons[b].addEventListener("click", (e: Event) => {
+  for (const eintrag of linkButtons) {
+    eintrag.addEventListener("click", (e: Event) => {
       const id = targetOf(e)?.getAttribute("data-evidence-id");
       if (id) openEvidenceModal(id);
     });

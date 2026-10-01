@@ -28,8 +28,8 @@ export function switchPeopleTab(tab: PeopleTab) {
 
 function countEvidenceForPerson(person: Person) {
   let count = 0;
-  for (let i = 0; i < state.allEvidence.length; i++) {
-    if (evidenceMentionsPerson(state.allEvidence[i], person)) count++;
+  for (const eintrag of state.allEvidence) {
+    if (evidenceMentionsPerson(eintrag, person)) count++;
   }
   return count;
 }
@@ -37,8 +37,8 @@ function countEvidenceForPerson(person: Person) {
 export function renderPeople() {
   const container = mustEl("peoplePanel");
   let html = "";
-  for (let i = 0; i < state.allPeople.length; i++) {
-    const person = state.allPeople[i];
+  for (const eintrag of state.allPeople) {
+    const person = eintrag;
     const count = countEvidenceForPerson(person);
 
     html += '<div class="person-card">';
@@ -54,8 +54,8 @@ export function renderPeople() {
     html += "</div>";
     html += "<p><strong>Speciality:</strong> " + person.speciality + "</p>";
     html += "<ul>";
-    for (let r = 0; r < person.responsibilities.length; r++) {
-      html += "<li>" + person.responsibilities[r] + "</li>";
+    for (const eintrag of person.responsibilities) {
+      html += "<li>" + eintrag + "</li>";
     }
     html += "</ul>";
     html += '<div class="person-statement">&ldquo;' + person.statement + "&rdquo;</div>";
@@ -69,8 +69,8 @@ export function renderPeople() {
   container.innerHTML = html;
 
   const links = container.querySelectorAll(".evidence-count-link");
-  for (let l = 0; l < links.length; l++) {
-    links[l].addEventListener("click", (e: Event) => {
+  for (const eintrag of links) {
+    eintrag.addEventListener("click", (e: Event) => {
       const personId = targetOf(e)?.getAttribute("data-person-id");
       if (!personId) return;
       mustEl<HTMLInputElement>("filterPerson").value = personId;
@@ -85,14 +85,14 @@ export function renderPeople() {
 export function renderLocations() {
   const container = mustEl("locationsPanel");
   let html = "";
-  for (let i = 0; i < state.allLocations.length; i++) {
-    const loc = state.allLocations[i];
+  for (const eintrag of state.allLocations) {
+    const loc = eintrag;
     html += '<div class="location-card">';
     html += "<h3>" + loc.id + " &mdash; " + loc.name + "</h3>";
     html += "<p>" + loc.description + "</p>";
     html += "<p><strong>Contains:</strong></p><ul>";
-    for (let c = 0; c < loc.contains.length; c++) {
-      html += "<li>" + loc.contains[c] + "</li>";
+    for (const eintrag of loc.contains) {
+      html += "<li>" + eintrag + "</li>";
     }
     html += "</ul></div>";
   }

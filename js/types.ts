@@ -91,11 +91,20 @@ export interface CaseData {
 }
 
 export interface Hypothesis {
-  suspectIds: string[];
+  suspectId: string;
+  nature: string;
   evidenceIds: string[];
-  reasoning: string;
-  confidence: number;
+  /** Als String gespeichert - der Wert kommt direkt aus einem <input>. */
+  confidence: string;
+  explanation: string;
+  alternative: string;
   savedAt: string;
+}
+
+/** Laufzeitpruefung fuer das, was aus dem localStorage kommt. Typen allein
+ *  reichen hier nicht: der Inhalt stammt von ausserhalb des Programms. */
+export function istHypothesis(v: unknown): v is Partial<Hypothesis> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
 /* ------------------------------------------------------------------ *

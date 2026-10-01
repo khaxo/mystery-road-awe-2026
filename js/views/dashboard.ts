@@ -7,8 +7,8 @@ export function renderDashboard() {
   if (!container) return;
 
   let reviewedCount = 0;
-  for (let i = 0; i < state.allEvidence.length; i++) {
-    if ((state.allEvidence[i].status || "").toLowerCase() === "reviewed") reviewedCount++;
+  for (const eintrag of state.allEvidence) {
+    if ((eintrag.status || "").toLowerCase() === "reviewed") reviewedCount++;
   }
 
   const progressPct =
@@ -18,12 +18,12 @@ export function renderDashboard() {
 
   let html = "";
   html += '<div class="case-summary-card">';
-  html += "<h3>" + (state.caseData.title || "Case") + "</h3>";
+  html += "<h3>" + (state.caseData.title ?? "Case") + "</h3>";
   html +=
     '<p><span class="badge badge-flagged">' +
-    (state.caseData.status || "unknown").toUpperCase() +
+    (state.caseData.status ?? "unknown").toUpperCase() +
     "</span></p>";
-  html += "<p>" + (state.caseData.summary || "") + "</p>";
+  html += "<p>" + (state.caseData.summary ?? "") + "</p>";
   html += "</div>";
 
   html += '<div class="stat-grid">';
@@ -50,8 +50,8 @@ export function renderDashboard() {
   if (recentEvidence.length === 0) {
     html += "<p>No evidence loaded yet.</p>";
   }
-  for (let e = 0; e < recentEvidence.length; e++) {
-    const ev = recentEvidence[e];
+  for (const eintrag of recentEvidence) {
+    const ev = eintrag;
     html +=
       '<div class="mini-list-item"><strong>' +
       ev.id +
@@ -70,8 +70,8 @@ export function renderDashboard() {
   if (recentTimeline.length === 0) {
     html += "<p>No timeline events loaded yet.</p>";
   }
-  for (let t = 0; t < recentTimeline.length; t++) {
-    const evt = recentTimeline[t];
+  for (const eintrag of recentTimeline) {
+    const evt = eintrag;
     html +=
       '<div class="mini-list-item"><strong>' +
       formatDate(evt.time) +

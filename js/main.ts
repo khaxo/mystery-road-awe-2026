@@ -46,7 +46,12 @@ function setupEventListeners() {
   }
 
   // Evidence
-  mustEl("evidenceSearch").addEventListener("input", handleSearchInput);
+  // handleSearchInput ist async, gibt also ein Promise zurueck. addEventListener
+  // erwartet void - ein zurueckgegebenes Promise wuerde niemand abfangen.
+  // void macht sichtbar, dass das Ergebnis bewusst verworfen wird.
+  mustEl("evidenceSearch").addEventListener("input", (e: Event) => {
+    void handleSearchInput(e);
+  });
 
   // Event delegation fuer Karten-Klicks / Bookmark-Button. Genau einmal registriert -
   // vorher hing der Listener nach jedem renderEvidenceList() zusaetzlich am Container.
@@ -64,7 +69,7 @@ function setupEventListeners() {
   // Die Detailansicht wird per innerHTML neu aufgebaut, ihre Buttons existieren
   // also noch nicht. Delegation auf den Container, der statisch im HTML steht.
   mustEl("evidenceDetailSection").addEventListener("click", (e: Event) => {
-    const action = targetOf(e)?.getAttribute && targetOf(e)?.getAttribute("data-action");
+    const action = targetOf(e)?.getAttribute?.("data-action");
     if (action === "close-detail") closeEvidenceDetail();
     if (action === "save-note") saveCurrentNote();
   });
@@ -102,4 +107,5 @@ async function initApp() {
 // Der fruehere doppelte hashchange-Listener (einmal hier, einmal in
 // setupEventListeners) war wirkungslos, weil identische Referenzen dedupliziert
 // werden - er ist trotzdem entfernt, weil er beim Lesen Unsinn suggeriert.
-initApp();
+// initApp ist async; void markiert, dass hier bewusst nicht gewartet wird.
+void initApp();

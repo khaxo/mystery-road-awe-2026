@@ -598,3 +598,131 @@ gesehen. Genau dafuer steht `tsc --noEmit` im `build`-Script.
   soll geprueft, aber **nicht** veroeffentlicht werden, sonst koennte ein beliebiger
   Beitrag die Live-Seite ueberschreiben, bevor jemand ihn gesehen hat. Beide haben
   zusaetzlich `workflow_dispatch`, damit ein Lauf auf Zuruf startbar ist.
+
+---
+
+## Nachtrag — ESLint-Beispielconfig des Dozenten (type-aware Linting)
+
+Nach der VZ-Session kam eine Beispiel-`eslint.config.js` dazu, die zeigt, welche
+Regeln `lint:fix` tatsaechlich reparieren kann. Sie wurde uebernommen; meine erste
+Config war in einem entscheidenden Punkt schwaecher.
+
+### Was sie anders macht
+
+|                  | meine erste Config | Beispielconfig                                                        |
+| ---------------- | ------------------ | --------------------------------------------------------------------- |
+| TS-Regelsatz     | `recommended`      | `recommendedTypeChecked` + `stylisticTypeChecked`                     |
+| Typinformationen | nein               | ja (`parserOptions.projectService`)                                   |
+| `eqeqeq`         | `"always"`         | `"smart"`                                                             |
+| zusaetzlich      | —                  | `prefer-includes`, `no-unnecessary-type-assertion`, `no-explicit-any` |
+
+**Type-aware Linting** ist der eigentliche Unterschied: ESLint bekommt Zugriff auf die
+TypeScript-Typen und kann damit Regeln auswerten, die reine Syntaxanalyse nicht leisten
+kann. `no-unnecessary-type-assertion` etwa meldet ein `as Evidence[]` nur dann, wenn der
+Wert ohnehin schon `Evidence[]` ist — das weiss man nur mit Typinformation.
+
+### Eine noetige Ergaenzung
+
+Die `...TypeChecked`-Configs stehen in der Beispieldatei ungefiltert auf oberster Ebene
+und greifen damit auch auf die `.js`-Dateien des Projekts (`eslint.config.js`,
+`vite.config.js`). Die liegen nicht im TypeScript-Projekt, weshalb jede typbasierte
+Regel dort abbricht:
+
+    Error: You have used a rule which requires type information, but don't have
+    parserOptions set to generate type information for this file.
+
+Behoben mit dem von typescript-eslint dafuer vorgesehenen Block, eingefuegt vor
+`prettier`:
+
+    { files: ["**/*.js"], ...tseslint.configs.disableTypeChecked },
+
+### Ergebnis: 78 Fehler, davon 12 automatisch behebbar
+
+| Regel                                                              | Anzahl | von `--fix` repariert?                        |
+| ------------------------------------------------------------------ | ------ | --------------------------------------------- |
+| `prefer-includes`                                                  | 11     | **ja** — `indexOf(x) !== -1` -> `includes(x)` |
+| `prefer-optional-chain`                                            | 1      | **ja** — `a && a.b()` -> `a?.b()`             |
+| `prefer-for-of`                                                    | 35     | nein                                          |
+| `prefer-nullish-coalescing`                                        | 11     | nein                                          |
+| `no-unsafe-assignment` / `-member-access` / `-call`                | 17     | nein                                          |
+| `no-misused-promises`, `no-floating-promises`, `no-base-to-string` | 3      | nein                                          |
+
+Das bestaetigt die Regel aus den Kommentaren der Beispielconfig am eigenen Code: ein
+Autofixer existiert genau dann, wenn es **eine** mechanische, bedeutungserhaltende
+Umschreibung gibt. `indexOf(x) !== -1` und `includes(x)` sind aequivalent — fixbar.
+Bei den uebrigen muss ein Mensch entscheiden.
+
+### `prefer-nullish-coalescing` — warum nicht fixbar, und ein echter Bug
+
+`||` und `??` unterscheiden sich bei **falsy, aber gueltigen** Werten: `0`, `""`,
+`false`. `||` ersetzt sie durch den Default, `??` nur `null`/`undefined`. Ein Autofix
+waere also potenziell verhaltensaendernd.
+
+In `js/views/workspace.ts` war das ein **echter Bug**:
+
+    mustEl("hypConfidence").value = draft.confidence || 50;
+
+Die Confidence ist ein Slider von 0 bis 100. Wer sie auf **0** stellt, speichert und neu
+laedt, bekam **50** zurueck — weil `0` falsy ist. Mit `??` korrigiert und nachgeprueft:
+Wert 0 gespeichert, Seite neu geladen, Feld und Anzeige stehen beide auf `0`.
+
+### `no-unsafe-*` — eine echte Luecke in meiner Migration
+
+17 Treffer, alle in `loadHypothesisFromStorage`: `JSON.parse()` liefert `any`, und
+dieser `any`-Wert wurde ungeprueft weiterverwendet. Das `Hypothesis`-Interface existierte
+in `js/types.ts`, war aber an dieser Stelle gar nicht benutzt — `tsc` hat das nicht
+gemeldet, weil `any` per Definition zu allem passt. Erst die type-aware Regeln haben es
+sichtbar gemacht.
+
+Behoben mit `unknown` + Laufzeit-Guard `istHypothesis()` + `try`/`catch` um das Parsen.
+Das ist genau der Punkt aus Demo 6: **Typen allein schuetzen nicht an der Systemgrenze.**
+
+### `no-base-to-string` — der groesste Fund: `[object Object]` auf der Live-Seite
+
+    js/views/timeline.ts:79
+    error  Using `join()` for eventLocationNames may use Object's default
+           stringification format ('[object Object]') when stringified
+
+Der Code:
+
+    const eventLocationNames = [];
+    for (let el = 0; el < item.locationIds.length; el++) {
+      const evtLoc = findLocationById(item.locationIds[el]);
+      eventLocationNames.push(evtLoc || item.locationIds[el]);   // <-- Objekt!
+    }
+    html += 'Location: ' + eventLocationNames.join(", ");
+
+`findLocationById` liefert ein **`CaseLocation`-Objekt**, keinen Namen. Wird der Ort
+gefunden, landet das ganze Objekt im Array; `join()` ruft darauf `toString()` auf und
+erzeugt `[object Object]`. Nur im **Fehlerfall** (Ort nicht gefunden) wurde die ID
+gepusht — ein String, der plausibel aussieht.
+
+**Auf der Live-Seite nachgezaehlt: 15 Treffer** — in _jedem_ Timeline-Event stand
+"Location: [object Object]".
+
+    - eventLocationNames.push(evtLoc || item.locationIds[el]);
+    + eventLocationNames.push(evtLoc ? evtLoc.name : item.locationIds[el]);
+
+Danach: 0 Treffer, stattdessen "Human-Robot Interaction Laboratory",
+"Infrastructure Operations Room" usw.
+
+**Das ist der wichtigste Einzelfund beider Uebungen.** Er hat die komplette Bug-Jagd aus
+Exercise 1 ueberlebt (fuenf Views mehrfach durchgeklickt), die TypeScript-Migration
+ueberlebt (`push()` auf ein untypisiertes `[]` ist typkorrekt — das Array wurde zu
+`(CaseLocation | string)[]` inferiert, und `join()` darauf ist erlaubt), und wurde erst
+von einer **type-aware Lint-Regel** gefunden. Lehre: `tsc --noEmit` gruen heisst nicht,
+dass die Typen _nuetzlich_ sind — ein zu breit inferierter Typ versteckt den Fehler
+genauso gut wie ein `any`.
+
+### Endstand
+
+    npm run typecheck   ->  0 Fehler
+    npm run lint        ->  0 Probleme
+    npm run format:check->  All matched files use Prettier code style!
+    npm run build       ->  ✓ built
+
+Vollstaendiger Funktionsdurchlauf gegen den Produktions-Build nach allen Aenderungen
+(34 Schleifen auf `for-of` umgebaut!): 18 Karten, Suche 18->7->18, vier
+Sortierkriterien mit vier verschiedenen Ergebnissen, Typfilter 18->1->18, Bookmark in
+`state` und `localStorage`, Notiz, Detailansicht, People/Locations-Tabs, Timeline-Modal,
+Workspace, Hypothese inklusive Confidence 0. **Null Laufzeitfehler.**
