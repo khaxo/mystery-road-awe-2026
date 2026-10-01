@@ -14,10 +14,6 @@ export function navigateTo(viewName: ViewName): void {
 export function handleHashChange(): void {
   const raw = window.location.hash.replace("#", "");
   const hash: ViewName = isViewName(raw) ? raw : "dashboard";
-  // ABSICHTLICHER FEHLER fuer Demo 10: Tippfehler im View-Namen (Plural).
-  // In reinem JavaScript waere das stillschweigend durchgelaufen und haette erst
-  // zur Laufzeit zu einer leeren Seite gefuehrt.
-  if (hash === "evidence") state.currentPage = "evidences";
   state.currentPage = hash;
 
   const sections = document.querySelectorAll<HTMLElement>(".view");

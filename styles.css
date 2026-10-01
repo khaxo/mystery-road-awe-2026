@@ -842,3 +842,11 @@ a:focus-visible {
     display: block;
   }
 }
+
+/* Sichtbarer Tastaturfokus. Vorher war beim Durchtabben nicht erkennbar,
+   welches Element gerade aktiv ist. :focus-visible trifft nur Tastatur-Fokus,
+   nicht Mausklicks. */
+:focus-visible {
+  outline: 3px solid #2f6feb;
+  outline-offset: 2px;
+}
