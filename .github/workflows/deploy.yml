@@ -1,0 +1,67 @@
+# Deployment-Workflow: baut und veroeffentlicht auf GitHub Pages.
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Minimal noetige Rechte fuer das GITHUB_TOKEN dieses Laufs.
+# Es wird NICHT auf Repository-Ebene vergeben, sondern nur hier - und nur lesend
+# auf den Code. Schreibrechte auf den Code braucht dieser Workflow nicht, weil er
+# nichts committet.
+permissions:
+  contents: read # Code auschecken
+  pages: write # auf Pages veroeffentlichen
+  id-token: write # OIDC-Token, mit dem sich der Deploy-Job bei Pages ausweist
+
+# Laeuft immer nur ein Deployment gleichzeitig. Ein neuer Push wartet, statt
+# ein laufendes Deployment zu ueberholen.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - run: npm ci
+
+      # Bewusst erneut geprueft, obwohl CI das schon tut: dieser Workflow muss
+      # fuer sich allein entscheiden koennen, ob er veroeffentlichen darf.
+      - name: Linten
+        run: npm run lint
+
+      - name: Bauen (enthaelt tsc --noEmit)
+        run: npm run build
+
+      - name: Pages konfigurieren
+        uses: actions/configure-pages@v5
+
+      # Laedt dist/ als Artefakt hoch. Das ist der Uebergabepunkt zwischen den
+      # beiden Jobs - der deploy-Job baut nicht neu, er veroeffentlicht nur dieses
+      # Artefakt.
+      - name: dist/ als Pages-Artefakt hochladen
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Auf GitHub Pages veroeffentlichen
+        id: deployment
+        uses: actions/deploy-pages@v4

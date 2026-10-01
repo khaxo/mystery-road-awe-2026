@@ -1,0 +1,46 @@
+# Entwicklungs-Workflow: prueft jeden Push und jeden Pull Request.
+# Deployt nichts - das macht deploy.yml.
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+  # Erlaubt den manuellen Start ueber die Actions-Oberflaeche.
+  workflow_dispatch:
+
+jobs:
+  quality:
+    name: Lint, Format & Types
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          # Cached den npm-Cache anhand des Hashes von package-lock.json.
+          # Aendert sich das Lockfile nicht, werden die Pakete nicht neu
+          # heruntergeladen - gleiche Versionen, nur schneller.
+          cache: "npm"
+
+      - name: Abhaengigkeiten installieren
+        # npm ci statt npm install: installiert exakt die Versionen aus dem
+        # Lockfile und bricht ab, wenn Lockfile und package.json auseinanderlaufen.
+        run: npm ci
+
+      - name: Formatierung pruefen
+        run: npm run format:check
+
+      - name: Linten
+        run: npm run lint
+
+      - name: Typen pruefen
+        run: npm run typecheck
+
+      - name: Build testen
+        run: npm run build
