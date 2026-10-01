@@ -1,0 +1,19 @@
+# Abhaengigkeiten - werden aus package.json + Lockfile reproduziert,
+# gehoeren deshalb nicht in die Versionskontrolle.
+node_modules/
+
+# Build-Output von Vite - generiert, jederzeit reproduzierbar.
+dist/
+
+# Vite-Cache
+.vite/
+node_modules/.vite/
+
+# Editor / OS
+.DS_Store
+.vscode/*
+!.vscode/settings.json
+
+# Logs
+*.log
+npm-debug.log*

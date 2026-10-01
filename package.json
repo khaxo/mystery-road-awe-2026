@@ -1,0 +1,19 @@
+{
+  "name": "mystery-road-awe-2026",
+  "version": "1.0.0",
+  "description": "Project ReMotion - investigation portal for the AWE (CSDC) course. Vanilla TypeScript app built with Vite.",
+  "type": "module",
+  "private": true,
+  "author": "Khaled Salama",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/khaxo/mystery-road-awe-2026.git"
+  },
+  "scripts": {
+    "dev": "vite"
+  },
+  "devDependencies": {
+    "vite": "^8.3.2"
+  }
+}
