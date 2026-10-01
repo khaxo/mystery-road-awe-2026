@@ -12,8 +12,7 @@ export const findPersonById = (id) => state.allPeople.find((person) => person.id
 export const findLocationById = (id) => state.allLocations.find((loc) => loc.id === id) || null;
 
 export const evidenceMentionsPerson = (ev, person) =>
-  Boolean(ev.personIds) &&
-  (ev.personIds.includes(person.id) || ev.personIds.includes(person.name));
+  Boolean(ev.personIds) && (ev.personIds.includes(person.id) || ev.personIds.includes(person.name));
 
 export const formatDate = (ts) => {
   if (!ts) return "Unknown date";

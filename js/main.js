@@ -63,8 +63,12 @@ function setupEventListeners() {
   });
 
   // People & Locations
-  document.getElementById("tabPeopleBtn").addEventListener("click", () => switchPeopleTab("people"));
-  document.getElementById("tabLocationsBtn").addEventListener("click", () => switchPeopleTab("locations"));
+  document
+    .getElementById("tabPeopleBtn")
+    .addEventListener("click", () => switchPeopleTab("people"));
+  document
+    .getElementById("tabLocationsBtn")
+    .addEventListener("click", () => switchPeopleTab("locations"));
 
   // Timeline
   document.getElementById("timelineOrder").addEventListener("change", renderTimeline);

@@ -36,6 +36,7 @@ Baseline: tag `original` (commit 22cb2d8), branch `exercise-1`.
 **Status:** gefixt
 
 **Reproduktion**
+
 1. `http://localhost:8080` laden
 2. Zur View "Evidence" navigieren
 
@@ -51,12 +52,12 @@ nach längerem Warten. Keine leere Liste, sondern ein hängender Loading-State.
 
 **Beobachteter State (Browser-Console, während der Bug sichtbar ist)**
 
-| Ausdruck | Wert | Bedeutung |
-|---|---|---|
-| `allEvidence.length` | 18 | Daten sind vollstaendig geladen |
-| `filteredEvidence.length` | 18 | Filterung verliert nichts |
-| `evidenceViewLoading` | `true` | App haelt sich weiterhin fuer "am Laden" |
-| `loadingStepsRemaining` | 0 | globaler Ladevorgang gilt als abgeschlossen |
+| Ausdruck                  | Wert   | Bedeutung                                   |
+| ------------------------- | ------ | ------------------------------------------- |
+| `allEvidence.length`      | 18     | Daten sind vollstaendig geladen             |
+| `filteredEvidence.length` | 18     | Filterung verliert nichts                   |
+| `evidenceViewLoading`     | `true` | App haelt sich weiterhin fuer "am Laden"    |
+| `loadingStepsRemaining`   | 0      | globaler Ladevorgang gilt als abgeschlossen |
 
 Damit waren Laden und Filtern als Ursache ausgeschlossen — die Daten sind da, nur
 gerendert wird nicht.
@@ -87,7 +88,7 @@ In Promise-Begriffen: `loadEvidenceData()` fetcht `data/evidence.json`, die Kett
 resolved einwandfrei, und der `.then()`-Block setzte auch korrekt `allEvidence`,
 `filteredEvidence` und die Bookmark-Flags — **er vergaß nur die eine Zustandsänderung,
 die das Rendern überhaupt erst freischaltet**. Der Fehler sitzt damit im Lifecycle-Punkt
-*on success*, nicht beim Start, nicht während pending und nicht im Fehlerfall.
+_on success_, nicht beim Start, nicht während pending und nicht im Fehlerfall.
 
 **Fix**
 
@@ -124,12 +125,12 @@ waere ein eigener Fehlerzustand in der View.
   (19 Deklaration, 91 Zuweisung, 375 Lesestelle).
 - Im Browser nach erzwungenem Cache-Refresh gegengeprueft:
 
-  | Pruefung | vorher | nachher |
-  |---|---|---|
-  | `evidenceViewLoading` | `true` | `false` |
-  | gerenderte Karten in `#evidenceList` | 0 | 18 |
-  | Loading-Indicator hat Klasse `hidden` | nein | ja |
-  | `allEvidence.length` | 18 | 18 (unveraendert) |
+  | Pruefung                              | vorher | nachher           |
+  | ------------------------------------- | ------ | ----------------- |
+  | `evidenceViewLoading`                 | `true` | `false`           |
+  | gerenderte Karten in `#evidenceList`  | 0      | 18                |
+  | Loading-Indicator hat Klasse `hidden` | nein   | ja                |
+  | `allEvidence.length`                  | 18     | 18 (unveraendert) |
 
 - **Stolperfalle beim Verifizieren:** Der erste Verifikationsversuch schlug fehl und sah
   aus, als haette der Fix nicht gewirkt — `evidenceViewLoading` stand weiter auf `true`,
@@ -156,6 +157,7 @@ waere ein eigener Fehlerzustand in der View.
 **Status:** gefixt
 
 **Reproduktion**
+
 1. `http://localhost:8080` mit offener Console laden
 2. Auf einen beliebigen Nav-Button klicken (Dashboard / Evidence / People / ...)
 
@@ -209,6 +211,7 @@ Vorher: ein TypeError pro Klick.
 **Status:** gefixt
 
 **Reproduktion**
+
 1. `http://localhost:8080` mit offener Console laden
 2. Auf die Ausgabe `First note preview:` warten (feuert einmal beim Start)
 
@@ -257,6 +260,7 @@ brauchbar als Vorher/Nachher fuer die Live-Demo.
 **Status:** gefixt
 
 **Reproduktion**
+
 1. Zur Timeline navigieren
 2. Ein Evidence-Quickview-Modal oeffnen, schliessen, wieder oeffnen, wieder schliessen
 3. Console beobachten
@@ -301,6 +305,7 @@ bei **1** (vorher: 1, 2, 3).
 **Status:** gefixt
 
 **Reproduktion** (im Vorzustand von Bug 1, siehe Abschnitt "Wechselwirkung" unten)
+
 1. Seite laden, auf dem Dashboard bleiben
 2. Zur Evidence-View wechseln
 3. Sortierung auf "Title A-Z" stellen
@@ -335,7 +340,7 @@ Zwei Zutaten, die einzeln harmlos sind:
 Zusammen: das Sortieren der "gefilterten Ansicht" sortiert die Stammdaten mit, weil beide
 Namen auf dasselbe Objekt zeigen.
 
-Referenz vs. Kopie: `filteredEvidence = allEvidence` kopiert nur den *Verweis*, nicht die
+Referenz vs. Kopie: `filteredEvidence = allEvidence` kopiert nur den _Verweis_, nicht die
 Daten. Beide Variablen zeigen danach auf ein und dasselbe Objekt im Speicher — jede
 Mutation ueber den einen Namen ist ueber den anderen sichtbar. Das unterscheidet sich
 fundamental von Primitives (`let b = a` bei einer Zahl legt einen unabhaengigen Wert an).
@@ -347,7 +352,7 @@ Kopie. Das Muster war also bekannt, wurde hier nur nicht angewendet.
 **Fix**
 
 `filteredEvidence = allEvidence.slice();` — `slice()` ohne Argumente liefert eine flache
-Kopie des Arrays. Die *Elemente* (Evidence-Objekte) bleiben dieselben Referenzen, was
+Kopie des Arrays. Die _Elemente_ (Evidence-Objekte) bleiben dieselben Referenzen, was
 gewollt ist: ein Bookmark-Flag soll ja in beiden Listen sichtbar sein. Nur die
 Reihenfolge ist ab jetzt pro Array unabhaengig.
 
@@ -356,10 +361,10 @@ Reihenfolge ist ab jetzt pro Array unabhaengig.
 Dieser Bug liess sich nach dem Fix von Bug 1 **nicht mehr ueber die normale Oberflaeche
 ausloesen** — der Bug-1-Fix hatte ihn zugedeckt:
 
-- *Vor* dem Bug-1-Fix stieg `renderEvidenceList()` am `evidenceViewLoading`-Guard sofort
+- _Vor_ dem Bug-1-Fix stieg `renderEvidenceList()` am `evidenceViewLoading`-Guard sofort
   wieder aus und erreichte `getFilteredEvidence()` nie. Damit blieb die Alias-Beziehung
   aus `loadEvidenceData` bestehen, und ein Sortieren traf `allEvidence` mit.
-- *Nach* dem Bug-1-Fix laeuft `renderEvidenceList()` durch, ruft `getFilteredEvidence()`
+- _Nach_ dem Bug-1-Fix laeuft `renderEvidenceList()` durch, ruft `getFilteredEvidence()`
   auf, und diese Funktion weist am Ende `filteredEvidence = results` zu — ein **neues**
   Array. Das Aliasing ist damit beim ersten Rendern der Evidence-View aufgeloest, bevor
   ueberhaupt sortiert werden kann.
@@ -387,6 +392,7 @@ Derselbe Angriff inklusive simuliertem Bug-1-Vorzustand laesst die Reihenfolge v
 **Status:** gefixt
 
 **Reproduktion**
+
 1. Evidence-View oeffnen
 2. Den Status-Filter auf einen Wert stellen
 
@@ -457,22 +463,22 @@ Einstiegspunkt direkt mit `<script type="module" src="js/main.js">`.
 
 ### Schnitt
 
-| Modul | Zeilen | Inhalt |
-|---|---|---|
-| `js/state.js` | 47 | geteilter veraenderlicher Zustand + `STORAGE_KEY_*`-Konstanten |
-| `js/utils.js` | 63 | Lookups (`findEvidenceById` …), `formatDate`, Badge-Klassen |
-| `js/storage.js` | 41 | alle `localStorage`-Zugriffe |
-| `js/data.js` | 92 | `fetch` der fuenf JSON-Dateien, Lade-Overlay |
-| `js/dropdowns.js` | 9 | `populateAllDropdowns` — Klammer um die drei View-Dropdowns |
-| `js/navigation.js` | 52 | `navigateTo`, `handleHashChange` |
-| `js/views/dashboard.js` | 68 | Dashboard |
-| `js/views/evidence.js` | 317 | Katalog, Filter, Sortierung, Detailansicht, Notizen |
-| `js/views/people.js` | 87 | People- und Locations-Tabs |
-| `js/views/timeline.js` | 128 | Timeline + Quickview-Modal |
-| `js/views/workspace.js` | 134 | Bookmarks, Notizen, Hypothesen-Formular |
-| `js/main.js` | 99 | Einstiegspunkt: Listener verdrahten, `initApp` |
+| Modul                   | Zeilen | Inhalt                                                         |
+| ----------------------- | ------ | -------------------------------------------------------------- |
+| `js/state.js`           | 47     | geteilter veraenderlicher Zustand + `STORAGE_KEY_*`-Konstanten |
+| `js/utils.js`           | 63     | Lookups (`findEvidenceById` …), `formatDate`, Badge-Klassen    |
+| `js/storage.js`         | 41     | alle `localStorage`-Zugriffe                                   |
+| `js/data.js`            | 92     | `fetch` der fuenf JSON-Dateien, Lade-Overlay                   |
+| `js/dropdowns.js`       | 9      | `populateAllDropdowns` — Klammer um die drei View-Dropdowns    |
+| `js/navigation.js`      | 52     | `navigateTo`, `handleHashChange`                               |
+| `js/views/dashboard.js` | 68     | Dashboard                                                      |
+| `js/views/evidence.js`  | 317    | Katalog, Filter, Sortierung, Detailansicht, Notizen            |
+| `js/views/people.js`    | 87     | People- und Locations-Tabs                                     |
+| `js/views/timeline.js`  | 128    | Timeline + Quickview-Modal                                     |
+| `js/views/workspace.js` | 134    | Bookmarks, Notizen, Hypothesen-Formular                        |
+| `js/main.js`            | 99     | Einstiegspunkt: Listener verdrahten, `initApp`                 |
 
-**Begruendung des Schnitts:** primaer nach *Zustaendigkeit*, nicht nach Dateigroesse.
+**Begruendung des Schnitts:** primaer nach _Zustaendigkeit_, nicht nach Dateigroesse.
 Die drei Querschnitts-Module (`state`, `utils`, `storage`) haben keine Abhaengigkeit zu
 Views und sind dadurch isoliert testbar. Jede View bekam ein eigenes Modul, weil die
 Views untereinander praktisch nichts teilen — sie beruehren sich nur ueber `state` und
@@ -499,7 +505,7 @@ Zustand handelt.
 
 `allEvidence` und die 15 anderen globalen `var`s waren von ueberall les- **und
 schreibbar**. Ein naives `export let allEvidence` loest das nicht: ein Import ist ein
-*read-only binding*. Lesen geht, aber
+_read-only binding_. Lesen geht, aber
 
     import { allEvidence } from "./state.js";
     allEvidence = data;        // TypeError: Assignment to constant variable.
@@ -516,10 +522,11 @@ im Code als solche erkennbar.
 
 `index.html` hatte 13 `onclick`/`onchange`-Attribute, `app.js` erzeugte zwei weitere in
 Template-Strings. **Alle 15 haetten mit `type="module"` aufgehoert zu funktionieren**,
-weil Inline-Handler gegen den *globalen* Scope aufgeloest werden und Modul-Top-Level
+weil Inline-Handler gegen den _globalen_ Scope aufgeloest werden und Modul-Top-Level
 nicht global ist — `navigateTo is not defined`.
 
 Zwei Wege standen zur Wahl:
+
 1. `window.navigateTo = navigateTo` im Einstiegspunkt — minimal, haette aber genau die
    Globals wieder eingefuehrt, die Demo 8 abschaffen will.
 2. Inline-Handler durch `addEventListener` ersetzen.
@@ -535,7 +542,7 @@ jedem Rendern neu erzeugt werden, der Container aber statisch im HTML steht.
 ### Weitere Beobachtungen
 
 - `initApp()` wird direkt aufgerufen statt ueber `DOMContentLoaded`. Modul-Skripte werden
-  automatisch *deferred* ausgefuehrt, das DOM steht also bereits — einer der
+  automatisch _deferred_ ausgefuehrt, das DOM steht also bereits — einer der
   Verhaltensunterschiede zum klassischen `<script>`.
 - Der doppelte `hashchange`-Listener (einmal in `setupEventListeners`, einmal am
   Dateiende) wurde entfernt. Er war wirkungslos, weil identische Funktionsreferenzen
@@ -645,7 +652,7 @@ und `window.state` sind jetzt `undefined`. Zugriff gibt es nur noch ueber einen
 expliziten `import`, und der ist im Code sichtbar. Fremde Skripte im selben Dokument
 koennen die Werte weder lesen noch ueberschreiben.
 
-**Was der Split NICHT loest:** Der Zustand ist weiterhin *geteilt* und veraenderlich.
+**Was der Split NICHT loest:** Der Zustand ist weiterhin _geteilt_ und veraenderlich.
 `state.allEvidence = ...` aus einem beliebigen importierenden Modul ist nach wie vor
 moeglich. Gewonnen ist die Kapselung nach aussen und die Nachvollziehbarkeit der
 Schreibzugriffe, nicht Unveraenderlichkeit.
@@ -672,7 +679,7 @@ Array in place sortiert.
 
 ### Code Smells (ueber die Globals hinaus)
 
-1. **Doppelte Bindung am Status-Filter** — siehe Bug 6. `addEventListener` *und*
+1. **Doppelte Bindung am Status-Filter** — siehe Bug 6. `addEventListener` _und_
    `setAttribute("onchange", ...)` auf demselben Element, als einziger der fuenf Filter.
    Kostete pro Filteraenderung einen kompletten ueberfluessigen Render-Durchlauf.
    Behoben.
@@ -729,7 +736,7 @@ auffaellt.
               }))
         }))
 
-Die Verschachtelung entstand dadurch, dass `.json()` jeweils *innerhalb* des
+Die Verschachtelung entstand dadurch, dass `.json()` jeweils _innerhalb_ des
 `.then()`-Callbacks aufgeloest wurde, statt die Kette flach zurueckzugeben. Jede der drei
 Dateien ist von der vorigen abhaengig — bzw. wurde so behandelt.
 
@@ -750,19 +757,19 @@ Dateien ist von der vorigen abhaengig — bzw. wurde so behandelt.
       populateAllDropdowns();
     }
 
-**Bewusst NICHT geaendert:** Die drei Requests laufen weiterhin *nacheinander*. Ein
+**Bewusst NICHT geaendert:** Die drei Requests laufen weiterhin _nacheinander_. Ein
 `Promise.all([...])` waere hier schneller, ist aber ausdruecklich Thema einer spaeteren
 Uebung.
 
 ### Weitere umgestellte Stellen
 
-| Stelle | vorher | nachher |
-|---|---|---|
-| `loadEvidenceData` | `.then().then().catch()` | `async` + `try`/`catch` |
-| `loadTimelineData` | `.then().then().catch().finally()` | `async` + `try`/`catch`/`finally` |
-| `loadAllData` | `.then()` | `async` + `await` |
-| `initApp` (main.js) | zwei geschachtelte `.then()` | zwei `await` |
-| `handleSearchInput` (evidence.js) | `.then()` mit Race-Guard | `await` + Guard danach |
+| Stelle                            | vorher                             | nachher                           |
+| --------------------------------- | ---------------------------------- | --------------------------------- |
+| `loadEvidenceData`                | `.then().then().catch()`           | `async` + `try`/`catch`           |
+| `loadTimelineData`                | `.then().then().catch().finally()` | `async` + `try`/`catch`/`finally` |
+| `loadAllData`                     | `.then()`                          | `async` + `await`                 |
+| `initApp` (main.js)               | zwei geschachtelte `.then()`       | zwei `await`                      |
+| `handleSearchInput` (evidence.js) | `.then()` mit Race-Guard           | `await` + Guard danach            |
 
 Das Error-Handling ist ueberall erhalten: aus `.catch(err => ...)` wurde `catch (err) { ... }`,
 aus `.finally(...)` wurde `finally { ... }` mit identischem Inhalt.
@@ -774,7 +781,7 @@ aendert (der Benutzer tippt weiter).
 
 ### Zu den Prueffragen
 
-- **Was `await` tut:** Es pausiert *nur die async-Funktion*, in der es steht, und gibt die
+- **Was `await` tut:** Es pausiert _nur die async-Funktion_, in der es steht, und gibt die
   Kontrolle an die Event-Loop zurueck. Das Programm laeuft normal weiter — Klicks, Timer,
   Rendering, andere async-Funktionen. Die Funktion setzt fort, wenn das Promise
   aufgeloest ist und der Microtask an der Reihe ist.
@@ -869,5 +876,5 @@ jemand den Aufruf irgendwann nach oben zieht.
 3. **Niemals Arrow** fuer Objektmethoden, Konstruktoren oder Funktionen, die `arguments`
    brauchen.
 
-Begruendung: Die Regel richtet sich nach *Aufrufkontext*, nicht nach Laenge. Sie ist
+Begruendung: Die Regel richtet sich nach _Aufrufkontext_, nicht nach Laenge. Sie ist
 mechanisch pruefbar und erklaert in jedem Einzelfall, warum die Wahl so ausfiel.
