@@ -850,8 +850,3 @@ a:focus-visible {
   outline: 3px solid #2f6feb;
   outline-offset: 2px;
 }
-
-/* Live-Demo */
-.brand-logo {
-  transform: rotate(-3deg);
-}
