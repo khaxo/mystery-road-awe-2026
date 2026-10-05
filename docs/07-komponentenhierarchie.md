@@ -191,7 +191,7 @@ String-Konkatenation dupliziert, einmal in jeder Render-Funktion:
 
 Immerhin war die _Klassenlogik_ in `getStatusBadgeClass()` zentralisiert — die Struktur
 aber nicht. Wer dem Badge ein Symbol oder ein `title`-Attribut hinzufügen wollte, musste
-fünf Stellen finden und alle gleich ändern. Dass die Timeline eine **eigene** Funktion
+sechs Stellen finden und alle gleich ändern. Dass die Timeline eine **eigene** Funktion
 `certaintyBadgeClass()` mit anderen Rückgabewerten hat, zeigt, wie die Varianten
 auseinandergelaufen sind.
 
