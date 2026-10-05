@@ -34,7 +34,9 @@ export default tseslint.config(
   ...tseslint.configs.stylisticTypeChecked,
 
   {
-    files: ["**/*.ts"],
+    // .tsx dazugenommen: die React-Komponenten brauchen dieselben typbasierten
+    // Regeln wie der uebrige TypeScript-Code.
+    files: ["**/*.{ts,tsx}"],
     languageOptions: {
       globals: { ...globals.browser },
       parserOptions: {

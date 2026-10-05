@@ -5,6 +5,11 @@
     "moduleResolution": "bundler",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
 
+    /* JSX wird nicht zu React.createElement uebersetzt, sondern zur modernen
+       automatischen Runtime (jsx-runtime). Deshalb braucht keine .tsx-Datei
+       ein `import React from "react"`. */
+    "jsx": "react-jsx",
+
     /* Vite uebernimmt das Transpilieren (esbuild). tsc laeuft hier ausschliesslich
        als Typpruefer - deshalb noEmit. */
     "noEmit": true,
@@ -32,5 +37,5 @@
 
     "skipLibCheck": true
   },
-  "include": ["js/**/*.ts", "vite.config.js"]
+  "include": ["js/**/*.ts", "react/**/*.ts", "react/**/*.tsx", "vite.config.js"]
 }
