@@ -1,6 +1,6 @@
-import type { Evidence } from "../../js/types.js";
-import { getStatusBadgeClass } from "../../js/utils.js";
-import { Badge } from "./Badge.js";
+import type { Evidence } from "../../../../js/types.js";
+import { getStatusBadgeClass } from "../../../../js/utils.js";
+import { Badge } from "../../../shared/components/Badge.js";
 
 interface Props {
   eintraege: Evidence[];

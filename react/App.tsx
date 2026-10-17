@@ -1,66 +1,62 @@
-import { AppHeader } from "./components/AppHeader.js";
-import { useCaseData } from "./hooks/useCaseData.js";
-import { useHashRoute } from "./hooks/useHashRoute.js";
-import { DashboardView } from "./views/DashboardView.js";
-import { PlaceholderView } from "./views/PlaceholderView.js";
+import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
+import { AppHeader } from "./app/AppHeader.js";
+import { NotFoundView } from "./app/NotFoundView.js";
+import { DashboardView } from "./features/dashboard/DashboardView.js";
+import { PersonDetailView } from "./features/team/PersonDetailView.js";
+import { TeamView } from "./features/team/TeamView.js";
+import { TimelineView } from "./features/timeline/TimelineView.js";
+import { useCaseData } from "./shared/hooks/useCaseData.js";
 
 /**
- * Wurzelkomponente: Shell (Header + Navigation) plus die aktuell gewaehlte View.
+ * Wurzelkomponente.
  *
- * Das Gegenstueck zu handleHashChange() aus der Vanilla-Version - aber ohne
- * manuelles Umschalten von CSS-Klassen. Es wird schlicht nur die aktive View
- * gerendert; die anderen existieren im DOM gar nicht erst.
+ * HashRouter statt BrowserRouter - bewusste Entscheidung:
+ * GitHub Pages ist ein reiner Dateiserver. Ein BrowserRouter braeuchte einen
+ * Server, der jeden Pfad auf index.html umschreibt. Ohne das waere ein direkter
+ * Aufruf von /team/people ein 404 - und damit waere die Anforderung
+ * "bookmarkable routes" genau nicht erfuellt. Mit HashRouter steht der Pfad
+ * hinter dem #, wird nie an den Server geschickt, und jeder Link funktioniert
+ * auch beim direkten Aufruf.
  */
 export function App() {
-  const [view, navigiere] = useHashRoute();
   const { laedt, fehler, ...daten } = useCaseData();
 
-  // Bookmarks liegen weiterhin im localStorage, genau wie in der Vanilla-App.
-  // Bewusst nur gelesen: Gesetzt werden sie in der Evidence-View, die noch
-  // nicht migriert ist.
-  const bookmarkAnzahl = leseBookmarkAnzahl();
-
   return (
-    <>
-      <AppHeader aktiveView={view} aufNavigation={navigiere} />
+    <HashRouter>
+      <AppHeader />
 
       <main id="app" className="app-main">
-        {fehler && (
+        {/* Conditional Rendering, Technik 3: Ternaer-Kette fuer sich
+            gegenseitig ausschliessende Zustaende. */}
+        {fehler ? (
           <section className="view active">
             <h2>Daten konnten nicht geladen werden</h2>
-            <div className="dashboard-panel">
-              <p>{fehler}</p>
-            </div>
+            <p>{fehler}</p>
           </section>
-        )}
-
-        {!fehler && laedt && (
+        ) : laedt ? (
           <section className="view active">
-            <h2>Case Dashboard</h2>
-            <div className="dashboard-panel">
-              <p>Loading case file&hellip;</p>
-            </div>
+            <h2>Case file</h2>
+            <p>Loading case file&hellip;</p>
           </section>
+        ) : (
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<DashboardView daten={daten} />} />
+
+            {/* /team ohne Tab -> auf den Personen-Tab umleiten */}
+            <Route path="/team" element={<Navigate to="/team/people" replace />} />
+            <Route path="/team/:tab" element={<TeamView daten={daten} />} />
+            <Route path="/team/people/:personId" element={<PersonDetailView daten={daten} />} />
+
+            <Route path="/timeline" element={<TimelineView daten={daten} />} />
+
+            {/* Catch-all. Der Vanilla-Code hat bei unbekanntem Hash still auf
+                Dashboard umgeleitet; hier gibt es stattdessen eine echte
+                404-Ansicht - siehe NotFoundView. */}
+            <Route path="*" element={<NotFoundView />} />
+          </Routes>
         )}
-
-        {!fehler &&
-          !laedt &&
-          (view === "dashboard" ? (
-            <DashboardView daten={daten} bookmarkAnzahl={bookmarkAnzahl} />
-          ) : (
-            <PlaceholderView view={view} />
-          ))}
       </main>
-    </>
+    </HashRouter>
   );
-}
-
-function leseBookmarkAnzahl(): number {
-  try {
-    const roh = localStorage.getItem("remotion_bookmarks");
-    const geparst: unknown = roh ? JSON.parse(roh) : [];
-    return Array.isArray(geparst) ? geparst.length : 0;
-  } catch {
-    return 0;
-  }
 }

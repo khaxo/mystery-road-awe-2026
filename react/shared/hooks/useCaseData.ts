@@ -7,8 +7,8 @@ import type {
   RawEvidence,
   RawTimelineEvent,
   TimelineEvent
-} from "../../js/types.js";
-import { normalisiereEvidence, normalisiereTimeline } from "../../js/types.js";
+} from "../../../js/types.js";
+import { normalisiereEvidence, normalisiereTimeline } from "../../../js/types.js";
 
 export interface CaseDaten {
   caseData: Partial<CaseData>;

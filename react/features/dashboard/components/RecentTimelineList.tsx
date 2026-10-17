@@ -1,5 +1,5 @@
-import type { TimelineEvent } from "../../js/types.js";
-import { formatDate } from "../../js/utils.js";
+import type { TimelineEvent } from "../../../../js/types.js";
+import { formatDate } from "../../../../js/utils.js";
 
 interface Props {
   eintraege: TimelineEvent[];

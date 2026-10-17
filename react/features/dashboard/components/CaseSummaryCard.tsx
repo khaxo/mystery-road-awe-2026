@@ -1,5 +1,5 @@
-import type { CaseData } from "../../js/types.js";
-import { Badge } from "./Badge.js";
+import type { CaseData } from "../../../../js/types.js";
+import { Badge } from "../../../shared/components/Badge.js";
 
 interface Props {
   caseData: Partial<CaseData>;

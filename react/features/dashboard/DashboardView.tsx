@@ -1,13 +1,28 @@
-import type { CaseDaten } from "../hooks/useCaseData.js";
-import { CaseSummaryCard } from "../components/CaseSummaryCard.js";
-import { RecentEvidenceList } from "../components/RecentEvidenceList.js";
-import { RecentTimelineList } from "../components/RecentTimelineList.js";
-import { ReviewProgress } from "../components/ReviewProgress.js";
-import { StatCard } from "../components/StatCard.js";
+import type { CaseDaten } from "../../shared/hooks/useCaseData.js";
+import { CaseSummaryCard } from "./components/CaseSummaryCard.js";
+import { RecentEvidenceList } from "./components/RecentEvidenceList.js";
+import { RecentTimelineList } from "./components/RecentTimelineList.js";
+import { ReviewProgress } from "./components/ReviewProgress.js";
+import { StatCard } from "./components/StatCard.js";
 
 interface Props {
   daten: CaseDaten;
-  bookmarkAnzahl: number;
+}
+
+/**
+ * Bookmarks liegen weiterhin im localStorage, genau wie in der Vanilla-App.
+ * Bewusst nur gelesen: Gesetzt werden sie in der Evidence-View, die erst in
+ * Uebung 5 migriert wird. Das Lesen steht jetzt hier statt in App - es ist
+ * eine Dashboard-Angelegenheit, nicht eine der Shell.
+ */
+function leseBookmarkAnzahl(): number {
+  try {
+    const roh = localStorage.getItem("remotion_bookmarks");
+    const geparst: unknown = roh ? JSON.parse(roh) : [];
+    return Array.isArray(geparst) ? geparst.length : 0;
+  } catch {
+    return 0;
+  }
 }
 
 /**
@@ -25,7 +40,9 @@ interface Props {
  *    viewRendered-Flags nur beim ERSTEN Besuch der View. Daher die veralteten
  *    Zahlen dort.
  */
-export function DashboardView({ daten, bookmarkAnzahl }: Props) {
+export function DashboardView({ daten }: Props) {
+  const bookmarkAnzahl = leseBookmarkAnzahl();
+
   const geprueft = daten.evidence.filter((ev) => ev.status === "reviewed").length;
 
   // slice() vor reverse(), weil reverse() in place arbeitet - genau der
