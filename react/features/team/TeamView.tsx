@@ -1,8 +1,7 @@
 import { Navigate, useParams } from "react-router-dom";
 import type { CaseDaten } from "../../shared/hooks/useCaseData.js";
-import { EmptyState } from "../../shared/components/EmptyState.js";
-import { LocationCard } from "./components/LocationCard.js";
-import { PersonCard } from "./components/PersonCard.js";
+import { LocationsList } from "./components/LocationsList.js";
+import { PeopleList } from "./components/PeopleList.js";
 import { TeamTabs } from "./components/TeamTabs.js";
 
 interface Props {
@@ -35,25 +34,8 @@ export function TeamView({ daten }: Props) {
       <h2>People &amp; Locations</h2>
       <TeamTabs />
 
-      {tab === "people" ? (
-        <div className="people-grid">
-          {daten.people.length === 0 ? (
-            <EmptyState text="Keine Personen geladen." />
-          ) : (
-            daten.people.map((person) => (
-              <PersonCard key={person.id} person={person} daten={daten} />
-            ))
-          )}
-        </div>
-      ) : (
-        <div className="people-grid">
-          {daten.locations.length === 0 ? (
-            <EmptyState text="Keine Orte geladen." />
-          ) : (
-            daten.locations.map((ort) => <LocationCard key={ort.id} ort={ort} />)
-          )}
-        </div>
-      )}
+      {/* Conditional Rendering, Technik 4: Ternaer fuer zwei Alternativen. */}
+      {tab === "people" ? <PeopleList daten={daten} /> : <LocationsList orte={daten.locations} />}
     </section>
   );
 }

@@ -5,6 +5,7 @@ import { DashboardView } from "./features/dashboard/DashboardView.js";
 import { PersonDetailView } from "./features/team/PersonDetailView.js";
 import { TeamView } from "./features/team/TeamView.js";
 import { TimelineView } from "./features/timeline/TimelineView.js";
+import { KeyDemo } from "./sandbox/KeyDemo.js";
 import { useCaseData } from "./shared/hooks/useCaseData.js";
 
 /**
@@ -49,6 +50,9 @@ export function App() {
             <Route path="/team/people/:personId" element={<PersonDetailView daten={daten} />} />
 
             <Route path="/timeline" element={<TimelineView daten={daten} />} />
+
+            {/* Wegwerf-Route fuer Demo 4. Nicht in der Navigation verlinkt. */}
+            <Route path="/sandbox/keys" element={<KeyDemo daten={daten} />} />
 
             {/* Catch-all. Der Vanilla-Code hat bei unbekanntem Hash still auf
                 Dashboard umgeleitet; hier gibt es stattdessen eine echte

@@ -1,21 +1,27 @@
-import type { CaseDaten } from "../../../shared/hooks/useCaseData.js";
+import { Link } from "react-router-dom";
 import type { Person } from "../../../../js/types.js";
-import { evidenceMentionsPerson } from "../../../../js/utils.js";
 import { AttributeList } from "../../../shared/components/AttributeList.js";
 import { Card } from "../../../shared/components/Card.js";
 
 interface Props {
   person: Person;
-  daten: CaseDaten;
+  /** Fertig berechnet. Die Karte zaehlt nicht selbst. */
+  anzahlBelege: number;
 }
 
-export function PersonCard({ person, daten }: Props) {
-  // Diese Komponente macht zwei Jobs: sie RECHNET (wie viele Beweisstuecke
-  // erwaehnen diese Person?) und sie STELLT DAR. Deshalb braucht sie den
-  // kompletten Datensatz als Prop, obwohl sie fuer die Darstellung nur eine
-  // Zahl braucht. Wird in Demo 5 aufgeteilt.
-  const anzahl = daten.evidence.filter((ev) => evidenceMentionsPerson(ev, person)).length;
-
+/**
+ * Rein darstellend: Props rein, JSX raus.
+ *
+ * Vorher (siehe Commit davor) nahm diese Komponente den kompletten Datensatz
+ * entgegen und hat die Anzahl selbst berechnet - sie machte zwei Jobs.
+ * Jetzt bekommt sie nur noch die fertige Zahl. Zwei Folgen:
+ *
+ * - Sie ist in jedem Kontext einsetzbar, auch dort, wo die Zahl anders
+ *   zustande kommt.
+ * - Aendert sich die Zaehlregel (zaehlen Aliasse mit? auch die Timeline?),
+ *   aendert sich nur PeopleList - diese Datei bleibt unberuehrt.
+ */
+export function PersonCard({ person, anzahlBelege }: Props) {
   return (
     <Card klasse="person-card">
       <div className="person-card-header">
@@ -35,7 +41,13 @@ export function PersonCard({ person, daten }: Props) {
       <div className="person-statement">&ldquo;{person.statement}&rdquo;</div>
 
       <p>
-        {anzahl} related evidence item{anzahl === 1 ? "" : "s"}
+        {anzahlBelege} related evidence item{anzahlBelege === 1 ? "" : "s"}
+        {" — "}
+        {/* Link auf die parametrisierte Route. Ein echtes <a href>, also
+            mittelklickbar und kopierbar. */}
+        <Link to={`/team/people/${person.id}`} className="evidence-count-link">
+          Profil oeffnen
+        </Link>
       </p>
     </Card>
   );
