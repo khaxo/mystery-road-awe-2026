@@ -13,6 +13,7 @@ import { WorkspaceView } from "./features/workspace/WorkspaceView.js";
 import { ControlledDemo } from "./sandbox/ControlledDemo.js";
 import { EffectDemo } from "./sandbox/EffectDemo.js";
 import { KeyDemo } from "./sandbox/KeyDemo.js";
+import { RaceDemo } from "./sandbox/RaceDemo.js";
 import type { CaseDaten } from "./shared/hooks/useCaseData.js";
 import { useCaseData } from "./shared/hooks/useCaseData.js";
 import { BASIS_BESCHREIBUNG, nutztBackend } from "./api/fallApi.js";
@@ -178,6 +179,7 @@ export function App() {
               <Route path="/sandbox/keys" element={<KeyDemo daten={daten} />} />
               <Route path="/sandbox/controlled" element={<ControlledDemo />} />
               <Route path="/sandbox/effects" element={<EffectDemo />} />
+              <Route path="/sandbox/race" element={<RaceDemo />} />
 
               {/* Catch-all. Der Vanilla-Code hat bei unbekanntem Hash still auf
                 Dashboard umgeleitet; hier gibt es stattdessen eine echte
