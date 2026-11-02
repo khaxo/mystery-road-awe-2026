@@ -35,6 +35,86 @@ npx serve .
 
 Then open `http://localhost:8080` (or whatever port your server prints) in your browser.
 
+## Entwicklungs-Backend (nur lokal)
+
+Seit Übung 6 liest die React-Version ihre Falldaten im Entwicklungsmodus von einem
+kleinen Node-Server, statt die JSON-Dateien direkt zu laden.
+
+**Dieser Server wird nicht deployt.** Die GitHub-Pages-Pipeline aus Übung 2 baut und
+veröffentlicht weiterhin ausschließlich das statische Frontend. Der Server ist kein
+Teil des Workflows, kein Teil des Builds und steht nicht in den `dependencies` —
+`express` ist eine `devDependency`.
+
+### Starten
+
+Zwei Terminals:
+
+```bash
+npm run server
+```
+
+```bash
+npm run dev
+```
+
+Der Server lauscht auf `http://localhost:3001`, der Vite-Dev-Server auf
+`http://localhost:5173`. Unterschiedlicher Port heißt unterschiedlicher Origin,
+deshalb setzt der Server einen `Access-Control-Allow-Origin`-Header für die
+Vite-Adressen (`server/index.js`).
+
+### Endpunkte
+
+| Endpunkt             | liefert                                                    |
+| -------------------- | ---------------------------------------------------------- |
+| `GET /api/case`      | `public/data/case.json`                                    |
+| `GET /api/evidence`  | `public/data/evidence.json`, optional gefiltert über `?q=` |
+| `GET /api/people`    | `public/data/people.json`                                  |
+| `GET /api/locations` | `public/data/locations.json`                               |
+| `GET /api/timeline`  | `public/data/timeline.json`                                |
+
+Nur Lesezugriffe. Lesezeichen, Notizen und der Hypothesen-Entwurf bleiben im
+`localStorage` — daran ändert diese Übung nichts.
+
+### Testschalter
+
+Pro Anfrage einstellbar, damit sich Lade-, Fehler- und Leerzustände vorführen lassen:
+
+| Parameter     | Wirkung                                     |
+| ------------- | ------------------------------------------- |
+| `?delay=2000` | wartet 2000 ms vor der Antwort (max. 20000) |
+| `?fail=1`     | antwortet mit `500` statt mit Daten         |
+| `?empty=1`    | antwortet mit einer leeren Liste            |
+
+`API_DELAY=500 npm run server` setzt die Grundverzögerung für alle Endpunkte
+(Standard: 250 ms).
+
+Dieselben drei Schalter wirken auch über die Adresszeile des Frontends und gelten
+dann für alle Anfragen:
+
+```
+react.html?delay=3000#/dashboard
+react.html?fail=1#/dashboard
+react.html?empty=1#/evidence
+```
+
+### Woher die Daten kommen
+
+Entschieden wird das an einer Stelle, in `react/api/basis.ts`:
+
+| Modus                          | Quelle                      |
+| ------------------------------ | --------------------------- |
+| `npm run dev`                  | `http://localhost:3001/api` |
+| `npm run dev:static`           | `data/*.json` (ohne Server) |
+| `npm run build` / GitHub Pages | `data/*.json`               |
+
+Der Produktionsbuild fällt auf die statischen Dateien zurück, weil das Backend
+laut Aufgabenstellung nicht deployt wird. Ohne diesen Rückfall wäre die
+veröffentlichte Seite tot. Beide Modi liefern dieselben Formen, weil der Server
+genau diese Dateien ausliefert.
+
+Die Vanilla-Version unter `index.html` ist davon nicht betroffen — sie lädt
+weiterhin direkt die JSON-Dateien.
+
 ## Features
 
 - **Dashboard** — case summary and key statistics calculated from the loaded case data.

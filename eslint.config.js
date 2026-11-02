@@ -25,6 +25,7 @@ import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 import globals from "globals";
 import prettier from "eslint-config-prettier";
+import reactHooks from "eslint-plugin-react-hooks";
 
 export default tseslint.config(
   { ignores: ["dist/**", "node_modules/**"] },
@@ -32,6 +33,16 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
+
+  // Uebung 6: Die Hook-Regeln. Zwei Dinge, die kein anderer Linter prueft:
+  //   rules-of-hooks      kein Hook in einer Bedingung, einer Schleife oder
+  //                       einer gewoehnlichen Funktion
+  //   exhaustive-deps     jeder Wert, den ein Effekt benutzt, steht in seiner
+  //                       Abhaengigkeitsliste
+  // Die zweite Regel ist der Grund fuer die Installation: Ein vergessener
+  // Eintrag erzeugt einen veralteten Wert im Effekt, und das ist genau der
+  // Fehler, den Demo 2 behandelt.
+  reactHooks.configs.flat["recommended-latest"],
 
   {
     // .tsx dazugenommen: die React-Komponenten brauchen dieselben typbasierten
@@ -94,6 +105,17 @@ export default tseslint.config(
   {
     files: ["**/*.js"],
     ...tseslint.configs.disableTypeChecked
+  },
+
+  // Uebung 6: Das Entwicklungs-Backend laeuft in Node, nicht im Browser.
+  // Ohne diesen Block kennt ESLint dort weder `console` noch `process` und
+  // meldet sie als undefinierte Variablen - die globals.browser aus dem
+  // Block oben gelten nur fuer den Frontend-Code.
+  {
+    files: ["server/**/*.js"],
+    languageOptions: {
+      globals: { ...globals.node }
+    }
   },
 
   // Must be last: turns off every ESLint *stylistic* rule that would
