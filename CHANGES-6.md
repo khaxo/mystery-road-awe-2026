@@ -933,8 +933,13 @@ Abhängigkeit also unbrauchbar, der Effekt würde endlos laufen.
 
 Deshalb gilt ein **Vertrag**: In `abhaengigkeiten` steht alles, wovon der
 Lader abhängt. Diesen Vertrag kann `exhaustive-deps` nicht prüfen — darum
-steht an dieser Stelle die einzige `eslint-disable`-Zeile des Projekts, mit
-der Begründung daneben.
+steht an dieser Stelle eine `eslint-disable`-Zeile, mit der Begründung
+daneben.
+
+Es ist die einzige im Produktionscode. Das Projekt hat drei: Die beiden
+anderen stehen in den Sandbox-Komponenten, die absichtlich falsch gebaut sind —
+`react-hooks/immutability` beim Seiteneffekt im Render (Demo 1) und
+`react-hooks/set-state-in-effect` bei der kaputten Wettlauf-Fassung (Demo 7).
 
 Zwei kleinere Dinge blieben ebenfalls spezifisch: Ob ein Fehler **angezeigt**
 wird (`useCaseData` nimmt den ersten von fünf; die Sandbox zeigt ihren eigenen)
