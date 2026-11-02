@@ -990,6 +990,20 @@ grep -rn "document\." react/        # eine Zeile: main.tsx:10
 grep -rn "addEventListener" react/   # keine Treffer
 ```
 
+> **Nachtrag aus Übung 6.** Seit `useDokumentTitel` gibt es einen zweiten
+> `document`-Zugriff: `document.title`. Das widerspricht der Aussage nicht,
+> sondern schärft sie — und der Unterschied ist genau der Punkt:
+>
+> | Zugriff                           | wo                    | Bewertung                                                           |
+> | --------------------------------- | --------------------- | ------------------------------------------------------------------- |
+> | `document.getElementById("root")` | `main.tsx`            | **innerhalb** der Wurzel: der Einhängepunkt, einmalig, unvermeidbar |
+> | `document.title`                  | `useDokumentTitel.ts` | **außerhalb** der Wurzel: ein externes System, in einem Effekt      |
+>
+> Reacts Zuständigkeit endet an seinem Wurzelknoten. Alles darin baut React —
+> dort wäre ein Direktzugriff ein Fehler. Der Tab-Titel liegt darüber und
+> gehört React nicht; ihn in einem Effekt zu setzen ist die vorgesehene Art,
+> mit der Außenwelt zu reden. Siehe CHANGES-6.md, Demo 1 und 2.
+
 **Fünf Ansichten, alle auf React-Zustand und Props:**
 
 | Ansicht            | Route                                | Zustand                                        |

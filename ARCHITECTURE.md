@@ -219,12 +219,79 @@ Kennzahlen des Dashboards, die Lesezeichenliste des Workspace, die Notizliste,
 der Inhalt des Typ-Dropdowns. Alle werden bei jedem Render neu berechnet. Die
 Begründung steht in CHANGES-5.md, Demo 4.
 
-## Imperatives DOM: genau eine Stelle
+## Imperatives DOM: zwei Stellen, zwei verschiedene Dinge
 
 ```bash
-grep -rn "document\." react/        # eine Zeile: main.tsx:10
+grep -rn "document\." react/        # zwei Zeilen
 grep -rn "addEventListener" react/   # keine Treffer
 ```
 
-`main.tsx:10` holt den Einhängepunkt für `createRoot`. React muss irgendwo
-anfangen; ab dieser Zeile ist alles deklarativ.
+| Zugriff                           | Datei                              | warum er dort richtig ist                                                                   |
+| --------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------- |
+| `document.getElementById("root")` | `main.tsx`                         | Der Einhängepunkt für `createRoot`. React muss irgendwo anfangen. **Innerhalb** der Wurzel. |
+| `document.title`                  | `shared/hooks/useDokumentTitel.ts` | Der Tab-Titel gehört React nicht. **Außerhalb** der Wurzel, deshalb in einem Effekt.        |
+
+Reacts Zuständigkeit endet an seinem Wurzelknoten: Alles darin baut und
+aktualisiert React. Ein Direktzugriff _dort_ wäre ein Fehler. Der Tab-Titel,
+der `localStorage` und ein `window`-Listener liegen außerhalb — sie sind
+externe Systeme, und ein Effekt ist die vorgesehene Art, mit ihnen zu reden.
+
+Kein `addEventListener`, kein `innerHTML`, kein `classList` im React-Baum.
+
+## Woher die Daten kommen (seit Übung 6)
+
+Vier Schichten, jede mit einer Zuständigkeit. Von unten nach oben:
+
+```
+public/data/*.json
+      │   gelesen von
+      ▼
+server/index.js                    Express, nur in der Entwicklung
+      │   GET /api/evidence
+      ▼
+react/api/basis.ts                 Welche Quelle gilt? Eine Entscheidung.
+react/api/fallApi.ts               Welche URLs, welche Antwortformen?
+      │   ladeEvidence(signal)  ->  Promise<Evidence[]>
+      ▼
+react/shared/hooks/useFetch.ts     Ladezustand, Fehlerzustand, Abbruch
+react/shared/hooks/useCaseData.ts  fünf Anfragen -> ein Zustand
+      │   { evidence, laedt, fehler, ... }
+      ▼
+react/App.tsx                      verteilt per Props und Context
+      │
+      ▼
+die Komponenten                    nur Darstellung, kein fetch
+```
+
+**Nachweisbar:** `grep -rn "fetch(" react/` liefert genau eine Zeile, und die
+steht in `react/api/fallApi.ts`.
+
+### Welche Quelle gilt
+
+| Modus                         | Quelle                      |
+| ----------------------------- | --------------------------- |
+| `npm run dev`                 | `http://localhost:3001/api` |
+| `npm run dev:static`          | `data/*.json`               |
+| `npm run build`, GitHub Pages | `data/*.json`               |
+
+Der Produktionsbuild fällt auf die statischen Dateien zurück, weil das Backend
+laut Aufgabenstellung nicht deployt wird. Ohne diesen Rückfall wäre die
+veröffentlichte Seite tot. Entschieden wird das an einer Stelle, in
+`react/api/basis.ts`, und der `localhost`-String landet nicht im
+Produktionsbundle — `import.meta.env.DEV` ist zur Bauzeit bekannt, der Zweig
+wird wegoptimiert:
+
+```bash
+npm run build && grep -c "localhost:3001" dist/assets/react-*.js   # 0
+```
+
+### Wenn sich das Backend ändert
+
+| Änderung                                               | betroffene Dateien                                |
+| ------------------------------------------------------ | ------------------------------------------------- |
+| Ein Pfad heißt anders (`/api/evidence` → `/api/items`) | `fallApi.ts`                                      |
+| Ein Feld heißt anders in der Antwort                   | `js/types.ts` (Normalisierung) und `fallApi.ts`   |
+| Anderer Port oder Host                                 | `basis.ts` — oder gar keine, über `VITE_API_BASE` |
+| Authentifizierung kommt dazu                           | `fallApi.ts`                                      |
+
+**Keine Komponente.** Das ist der Zweck der Trennung.
