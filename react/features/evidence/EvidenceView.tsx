@@ -106,7 +106,11 @@ export function EvidenceView({ daten, notizen, onNotizSpeichern, onPruefung }: P
 
       {/* Keine Lesezeichen-Props mehr. Die Karten holen sich den Zustand
           selbst aus dem Context - diese Ansicht muss ihn nicht durchreichen. */}
-      <EvidenceList belege={sichtbar} />
+      <EvidenceList
+        belege={sichtbar}
+        datensatzLeer={daten.evidence.length === 0}
+        onZuruecksetzen={() => dispatch({ type: "CLEAR_FILTERS" })}
+      />
     </section>
   );
 }
