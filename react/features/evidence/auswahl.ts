@@ -97,7 +97,17 @@ export function waehleEvidence(
       })
     : alle;
 
-  return treffer.sort(vergleicher(filter.sortierung));
+  // [...treffer] ist nicht optional.
+  //
+  // Ist kein Filter aktiv, IST `treffer` das uebergebene Array - dieselbe
+  // Referenz, nicht eine Kopie. Ein sort() darauf wuerde die Liste des
+  // Aufrufers umsortieren. Genau dieser Fehler war Bug 5 aus Uebung 1:
+  // dort hingen `filteredEvidence` und `allEvidence` an derselben Referenz,
+  // und das Sortieren der Ansicht hat die Originalreihenfolge zerstoert.
+  //
+  // Nicht die Abkuerzung oben ist das Problem, sondern das Sortieren in
+  // place. Mit der Kopie darf die Abkuerzung bleiben.
+  return [...treffer].sort(vergleicher(filter.sortierung));
 }
 
 /** Alle vorkommenden Belegarten, alphabetisch - fuer das Typ-Dropdown. */

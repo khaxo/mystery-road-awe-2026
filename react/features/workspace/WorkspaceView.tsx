@@ -1,4 +1,3 @@
-import { useState } from "react";
 import type { CaseDaten } from "../../shared/hooks/useCaseData.js";
 import { useBookmarks } from "../../shared/state/BookmarkContext.js";
 import { BookmarkList } from "./components/BookmarkList.js";
@@ -18,17 +17,16 @@ interface Props {
  * Hypothesen-Formular.
  */
 export function WorkspaceView({ daten, notizen }: Props) {
-  const { bookmarks } = useBookmarks();
+  const { bookmarks, toggleBookmark } = useBookmarks();
 
-  // Eigene Liste der angezeigten Lesezeichen, damit das Entfernen hier
-  // sofort sichtbar ist, ohne auf den Zustand weiter oben zu warten.
-  const [sichtbareBookmarks, setSichtbareBookmarks] = useState<string[]>([...bookmarks]);
-
-  const markierteBelege = daten.evidence.filter((ev) => sichtbareBookmarks.includes(ev.id));
-
-  function entferne(evidenceId: string) {
-    setSichtbareBookmarks(sichtbareBookmarks.filter((id) => id !== evidenceId));
-  }
+  // Abgeleitet aus der einen Lesezeichen-Liste, nicht kopiert.
+  //
+  // Hier stand bis zum Commit davor ein eigenes useState, das beim Mounten
+  // von `bookmarks` befuellt wurde - mit der Begruendung, das Entfernen
+  // solle "sofort wirken". Es wirkte auch sofort, aber nur hier: Der
+  // Dashboard-Zaehler und die Sterne im Katalog bekamen davon nichts mit,
+  // und der localStorage blieb unveraendert. Siehe CHANGES-5.md, Demo 9.
+  const markierteBelege = daten.evidence.filter((ev) => bookmarks.includes(ev.id));
 
   // Notizen -> Anzeigeeintraege. Abgeleitet, nicht gespeichert: Es gibt keine
   // zweite Liste, die nach dem Speichern einer Notiz nachgezogen werden muesste.
@@ -43,7 +41,7 @@ export function WorkspaceView({ daten, notizen }: Props) {
       <div className="workspace-grid">
         <div className="workspace-col">
           <h3>Bookmarked Evidence</h3>
-          <BookmarkList belege={markierteBelege} onEntfernen={entferne} />
+          <BookmarkList belege={markierteBelege} onEntfernen={toggleBookmark} />
         </div>
 
         <div className="workspace-col">
