@@ -26,18 +26,34 @@ react/
 │   │   ├── PersonDetailView.tsx  liest :personId
 │   │   └── components/           TeamTabs, PeopleList, PersonCard,
 │   │                             LocationsList, LocationCard
-│   └── timeline/
-│       ├── TimelineView.tsx      liest ?person=
-│       └── components/           TimelineFilterBar, TimelineEntry
+│   ├── timeline/
+│   │   ├── TimelineView.tsx      Filter in der URL, kein useState
+│   │   └── components/           TimelineFilterBar, TimelineEntry
+│   ├── evidence/
+│   │   ├── EvidenceView.tsx      useReducer für die Filter, :evidenceId
+│   │   ├── auswahl.ts            reine Auswahlfunktion, kein React
+│   │   ├── filterReducer.ts      SET_FILTER, SET_SORT, CLEAR_FILTERS
+│   │   └── components/           EvidenceToolbar, EvidenceList,
+│   │                             EvidenceCard, EvidenceDetail
+│   └── workspace/
+│       ├── WorkspaceView.tsx
+│       └── components/           BookmarkList, NotesList, HypothesisForm
 │
 ├── shared/                       Von mindestens zwei Features benutzt
 │   ├── components/               Badge, Card, EmptyState, AttributeList
-│   └── hooks/                    useCaseData
+│   ├── hooks/                    useCaseData
+│   └── state/                    BookmarkContext, speicher (localStorage)
 │
 └── sandbox/                      Wegwerf-Beispiele, nicht Teil der App
     ├── HalloFall.tsx             JSX-Übung aus Übung 3
-    └── KeyDemo.tsx               key={index} gegen key={id}
+    ├── KeyDemo.tsx               key={index} gegen key={id}
+    └── ControlledDemo.tsx        kontrolliert gegen unkontrolliert
 ```
+
+Zwei Dateien in `features/evidence/` sind kein React: `auswahl.ts` und
+`filterReducer.ts` enthalten keinen Hook, kein JSX und keinen React-Import. Das
+ist Absicht — „welche Belege sind sichtbar?" und „was macht diese Aktion mit dem
+Filterzustand?" sind Rechnungen, die man ohne React lesen und testen kann.
 
 ## Die Regel für „shared" gegen „feature-lokal"
 
@@ -86,32 +102,43 @@ Zugehörigkeit nachdenken muss. Bei fünf Views mit je mehreren Komponenten kipp
 
 ## Presentational gegen Feature
 
-| Komponente           | Art            | Begründung                                             |
-| -------------------- | -------------- | ------------------------------------------------------ |
-| `Badge`              | presentational | Props rein, JSX raus                                   |
-| `Card`               | presentational | kennt ihren Inhalt nicht, nimmt `children`             |
-| `EmptyState`         | presentational | ein String, ein Absatz                                 |
-| `AttributeList`      | presentational | Titel + Liste, keine Herkunft                          |
-| `StatCard`           | presentational | Zahl + Label                                           |
-| `CaseSummaryCard`    | presentational | bekommt `caseData` fertig                              |
-| `ReviewProgress`     | presentational | rechnet nur aus zwei Props eine Prozentzahl            |
-| `RecentEvidenceList` | presentational | bekommt die fertige Liste                              |
-| `RecentTimelineList` | presentational | bekommt die fertige Liste                              |
-| `PersonCard`         | presentational | **nach der Aufteilung**: nimmt `anzahlBelege` als Zahl |
-| `LocationCard`       | presentational | Props rein, JSX raus                                   |
-| `TeamTabs`           | presentational | zwei Links, keine Daten                                |
-| `TimelineEntry`      | presentational | bekommt `ortsnamen` fertig aufgelöst                   |
-| `TimelineFilterBar`  | presentational | Listen rein, Markup raus                               |
-| `MainNav`            | presentational | feste Liste, kein Datenzugriff                         |
-| `AppHeader`          | presentational | reine Hülle                                            |
-| `PeopleList`         | **feature**    | berechnet die Beleganzahl pro Person                   |
-| `LocationsList`      | **feature**    | wählt zwischen Liste und Leerzustand                   |
-| `TeamView`           | **feature**    | liest `:tab`, validiert, leitet um                     |
-| `PersonDetailView`   | **feature**    | liest `:personId`, sucht, behandelt „nicht gefunden"   |
-| `TimelineView`       | **feature**    | liest `?person=`, filtert, sortiert                    |
-| `DashboardView`      | **feature**    | liest `localStorage`, leitet Werte ab                  |
-| `NotFoundView`       | **feature**    | liest `useLocation`                                    |
-| `App`                | **feature**    | lädt Daten, definiert Routen                           |
+| Komponente           | Art            | Begründung                                               |
+| -------------------- | -------------- | -------------------------------------------------------- |
+| `Badge`              | presentational | Props rein, JSX raus                                     |
+| `Card`               | presentational | kennt ihren Inhalt nicht, nimmt `children`               |
+| `EmptyState`         | presentational | ein String, ein Absatz                                   |
+| `AttributeList`      | presentational | Titel + Liste, keine Herkunft                            |
+| `StatCard`           | presentational | Zahl + Label                                             |
+| `CaseSummaryCard`    | presentational | bekommt `caseData` fertig                                |
+| `ReviewProgress`     | presentational | rechnet nur aus zwei Props eine Prozentzahl              |
+| `RecentEvidenceList` | presentational | bekommt die fertige Liste                                |
+| `RecentTimelineList` | presentational | bekommt die fertige Liste                                |
+| `PersonCard`         | presentational | **nach der Aufteilung**: nimmt `anzahlBelege` als Zahl   |
+| `LocationCard`       | presentational | Props rein, JSX raus                                     |
+| `TeamTabs`           | presentational | zwei Links, keine Daten                                  |
+| `TimelineEntry`      | presentational | bekommt `ortsnamen` fertig aufgelöst                     |
+| `TimelineFilterBar`  | presentational | Listen rein, Markup raus                                 |
+| `MainNav`            | presentational | feste Liste, kein Datenzugriff                           |
+| `AppHeader`          | presentational | reine Hülle                                              |
+| `EvidenceToolbar`    | presentational | sieben kontrollierte Felder, Werte rein, Ereignisse raus |
+| `EvidenceList`       | presentational | **nach Demo 8**: bekommt nur noch die fertige Liste      |
+| `BookmarkList`       | presentational | filtert nicht selbst, bekommt die Belege fertig          |
+| `NotesList`          | presentational | bekommt fertige Anzeigeeinträge                          |
+| `ControlledDemo`     | presentational | Wegwerf-Ansicht, eigener lokaler Zustand                 |
+| `EvidenceCard`       | **feature**    | holt Lesezeichen per `useBookmarks()` aus dem Context    |
+| `EvidenceDetail`     | **feature**    | hält den Notiz-Entwurf lokal, meldet das Speichern hoch  |
+| `HypothesisForm`     | **feature**    | hält den ganzen Entwurf, liest und schreibt localStorage |
+| `EvidenceView`       | **feature**    | `useReducer` für Filter, liest `:evidenceId`, leitet ab  |
+| `WorkspaceView`      | **feature**    | leitet Lesezeichen- und Notizlisten ab                   |
+| `PeopleList`         | **feature**    | berechnet die Beleganzahl pro Person                     |
+| `LocationsList`      | **feature**    | wählt zwischen Liste und Leerzustand                     |
+| `TeamView`           | **feature**    | liest `:tab`, validiert, leitet um                       |
+| `PersonDetailView`   | **feature**    | liest `:personId`, sucht, behandelt „nicht gefunden"     |
+| `TimelineView`       | **feature**    | liest vier Query-Parameter, filtert, sortiert            |
+| `DashboardView`      | **feature**    | leitet alle fünf Kennzahlen ab, nichts gespeichert       |
+| `NotFoundView`       | **feature**    | liest `useLocation`                                      |
+| `App`                | **feature**    | lädt Daten, besitzt Notizen und Prüfstand, Routen        |
+| `BookmarkProvider`   | **feature**    | besitzt den Lesezeichen-Zustand, keine Darstellung       |
 
 **Die Regel dahinter:** Sobald eine Komponente _etwas erfährt, das nicht in ihren
 Props steht_ — ein Routenparameter, ein Query-Parameter, `localStorage`, ein
@@ -147,11 +174,15 @@ obwohl sie für die Darstellung eine einzige Zahl benötigte.
 | ------------------------ | ----------------------------------------------------------- |
 | `/`                      | Weiterleitung auf `/dashboard`                              |
 | `/dashboard`             | `DashboardView`                                             |
+| `/evidence`              | `EvidenceView`                                              |
+| `/evidence/:evidenceId`  | `EvidenceView` mit offener Detailansicht                    |
 | `/team`                  | Weiterleitung auf `/team/people`                            |
 | `/team/:tab`             | `TeamView` (`people` oder `locations`, sonst Weiterleitung) |
 | `/team/people/:personId` | `PersonDetailView`                                          |
-| `/timeline`              | `TimelineView`, liest `?person=`                            |
+| `/timeline`              | `TimelineView`, liest `?order=&person=&ort=&typ=`           |
+| `/workspace`             | `WorkspaceView`                                             |
 | `/sandbox/keys`          | `KeyDemo`, liest `?order=`                                  |
+| `/sandbox/controlled`    | `ControlledDemo`                                            |
 | alles andere             | `NotFoundView`                                              |
 
 **`HashRouter` statt `BrowserRouter`** — bewusste Entscheidung. GitHub Pages ist ein
@@ -159,3 +190,41 @@ reiner Dateiserver und kann Pfade nicht auf `index.html` umschreiben. Mit einem
 `BrowserRouter` wäre der direkte Aufruf von `/team/people` ein 404, und genau die
 geforderte Eigenschaft „bookmarkable" wäre verfehlt. Hinter dem `#` wird der Pfad nie
 an den Server geschickt, also funktioniert jeder Link auch beim Direktaufruf.
+
+## Wo der Zustand wohnt
+
+Seit Übung 5 steht in diesem Projekt an fünf Stellen Zustand. Jede Zeile hat
+eine Begründung, und die Begründungen unterscheiden sich — das ist kein
+Versehen.
+
+| Was                         | Wo                 | Mechanismus             | warum dort                                                                  |
+| --------------------------- | ------------------ | ----------------------- | --------------------------------------------------------------------------- |
+| Lesezeichen                 | `BookmarkProvider` | `useState` + Context    | vier Verbrauchsstellen in drei Feature-Ordnern                              |
+| Notizen                     | `App`              | `useState` + Props      | eine schreibende, eine lesende Stelle — Context wäre Aufwand ohne Gegenwert |
+| Prüfstand (Status/Relevanz) | `App`              | `useState` + Props      | geändert im Detail, gelesen in Katalog und Dashboard                        |
+| Katalogfilter (7 Werte)     | `EvidenceView`     | `useReducer`            | interessiert niemanden außerhalb der Ansicht; drei Arten von Änderung       |
+| Timeline-Filter (4 Werte)   | die URL            | `useSearchParams`       | eine gefilterte Timeline will man verschicken                               |
+| Notiz-Entwurf               | `EvidenceDetail`   | `useState`              | halb getippter Text interessiert niemanden sonst                            |
+| Hypothesen-Entwurf          | `HypothesisForm`   | `useState` (ein Objekt) | ein Dokument, als Ganzes geladen und gespeichert                            |
+
+**Was bewusst KEIN Zustand ist:** die geladenen Falldaten. Sie kommen aus
+`useCaseData()` und werden nie in ein `useState` kopiert. Die
+Benutzeranmerkungen liegen deshalb _neben_ den Daten, nicht in ihnen;
+`App.tsx` führt beides beim Rendern zusammen. Sonst gäbe es zwei Belegelisten —
+die geladene und die kopierte — und damit genau die doppelte Wahrheit, die die
+Vanilla-Version mit `applyStoredBookmarkFlags()` von Hand synchron halten musste.
+
+**Ebenfalls kein Zustand:** jeder abgeleitete Wert. Die gefilterte Liste, die
+Kennzahlen des Dashboards, die Lesezeichenliste des Workspace, die Notizliste,
+der Inhalt des Typ-Dropdowns. Alle werden bei jedem Render neu berechnet. Die
+Begründung steht in CHANGES-5.md, Demo 4.
+
+## Imperatives DOM: genau eine Stelle
+
+```bash
+grep -rn "document\." react/        # eine Zeile: main.tsx:10
+grep -rn "addEventListener" react/   # keine Treffer
+```
+
+`main.tsx:10` holt den Einhängepunkt für `createRoot`. React muss irgendwo
+anfangen; ab dieser Zeile ist alles deklarativ.
