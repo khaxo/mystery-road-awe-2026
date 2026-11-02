@@ -7,22 +7,15 @@ import { StatCard } from "./components/StatCard.js";
 
 interface Props {
   daten: CaseDaten;
-}
-
-/**
- * Bookmarks liegen weiterhin im localStorage, genau wie in der Vanilla-App.
- * Bewusst nur gelesen: Gesetzt werden sie in der Evidence-View, die erst in
- * Uebung 5 migriert wird. Das Lesen steht jetzt hier statt in App - es ist
- * eine Dashboard-Angelegenheit, nicht eine der Shell.
- */
-function leseBookmarkAnzahl(): number {
-  try {
-    const roh = localStorage.getItem("remotion_bookmarks");
-    const geparst: unknown = roh ? JSON.parse(roh) : [];
-    return Array.isArray(geparst) ? geparst.length : 0;
-  } catch {
-    return 0;
-  }
+  /**
+   * Kommt jetzt von App.tsx, nicht mehr aus dem localStorage.
+   *
+   * Bis Uebung 4 las diese Datei den Zaehler selbst aus dem Speicher - das war
+   * die einzige Moeglichkeit, solange der Belegkatalog noch Vanilla war. Jetzt
+   * besitzt App die Lesezeichen, und das Dashboard bekommt die Zahl gereicht.
+   * Damit gibt es nur noch EINE Stelle, an der steht, was markiert ist.
+   */
+  anzahlBookmarks: number;
 }
 
 /**
@@ -40,9 +33,7 @@ function leseBookmarkAnzahl(): number {
  *    viewRendered-Flags nur beim ERSTEN Besuch der View. Daher die veralteten
  *    Zahlen dort.
  */
-export function DashboardView({ daten }: Props) {
-  const bookmarkAnzahl = leseBookmarkAnzahl();
-
+export function DashboardView({ daten, anzahlBookmarks }: Props) {
   const geprueft = daten.evidence.filter((ev) => ev.status === "reviewed").length;
 
   // slice() vor reverse(), weil reverse() in place arbeitet - genau der
@@ -60,7 +51,7 @@ export function DashboardView({ daten }: Props) {
         <StatCard wert={daten.evidence.length} label="Evidence items" />
         <StatCard wert={daten.people.length} label="People" />
         <StatCard wert={daten.locations.length} label="Locations" />
-        <StatCard wert={bookmarkAnzahl} label="Bookmarked" />
+        <StatCard wert={anzahlBookmarks} label="Bookmarked" />
         <StatCard wert={geprueft} label="Reviewed" />
       </div>
 

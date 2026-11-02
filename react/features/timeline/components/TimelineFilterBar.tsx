@@ -1,32 +1,47 @@
 import type { CaseLocation, Person } from "../../../../js/types.js";
 
+export interface TimelineFilter {
+  order: string;
+  person: string;
+  ort: string;
+  typ: string;
+}
+
+export type TimelineFilterFeld = keyof TimelineFilter;
+
 interface Props {
   personen: readonly Person[];
   orte: readonly CaseLocation[];
   typen: readonly string[];
-  /** Vorauswahl aus der URL. Die Steuerelemente sind absichtlich NICHT verdrahtet. */
-  gewaehltePerson: string;
+  filter: TimelineFilter;
+  onFilter: (feld: TimelineFilterFeld, wert: string) => void;
 }
 
 /**
  * Filterleiste der Timeline.
  *
- * Laut Aufgabenstellung fuer diese Uebung bewusst **nicht funktional**: Die
- * Dropdowns sind vollstaendig gerendert und zeigen die Vorauswahl aus der URL,
- * aendern beim Umstellen aber nichts. Das Verdrahten mit `onChange` und
- * `useState` ist Thema von Uebung 5.
+ * In Uebung 4 waren diese vier Steuerelemente absichtlich tot: `defaultValue`,
+ * `disabled`, kein Handler. Jetzt sind sie kontrolliert - `value` von oben,
+ * `onChange` nach oben.
  *
- * `defaultValue` statt `value`: Mit `value` und ohne `onChange` waere das Feld
- * dauerhaft eingefroren und React warnt in der Konsole. `defaultValue` macht es
- * zu einem *unkontrollierten* Element - der Browser verwaltet den Wert selbst,
- * React gibt nur den Startwert vor.
+ * Die Besonderheit gegenueber dem Belegkatalog: Der Zustand dieser Leiste
+ * liegt nicht in einem useState oder useReducer, sondern in der URL
+ * (?order=&person=&ort=&typ=). TimelineView liest ihn mit useSearchParams.
+ *
+ * Begruendung: Eine gefilterte Timeline ist etwas, das man verschickt
+ * ("schau dir mal die Ereignisse mit Nova Byte an"). Nach der Regel aus
+ * Uebung 4 - wenn ein Zustand den Benutzer interessiert, gehoert er in die
+ * URL - ist das hier der richtige Ort. Der Belegkatalog hat sieben
+ * Filterwerte und wuerde daraus eine unleserliche Adresse machen; dort liegt
+ * der Zustand deshalb in der Komponente. Zwei Antworten auf dieselbe Frage,
+ * bewusst unterschiedlich.
  */
-export function TimelineFilterBar({ personen, orte, typen, gewaehltePerson }: Props) {
+export function TimelineFilterBar({ personen, orte, typen, filter, onFilter }: Props) {
   return (
     <div className="filter-bar">
       <label>
         Order
-        <select defaultValue="asc" disabled>
+        <select value={filter.order} onChange={(e) => onFilter("order", e.target.value)}>
           <option value="asc">Oldest first</option>
           <option value="desc">Newest first</option>
         </select>
@@ -34,7 +49,7 @@ export function TimelineFilterBar({ personen, orte, typen, gewaehltePerson }: Pr
 
       <label>
         Person
-        <select defaultValue={gewaehltePerson} disabled>
+        <select value={filter.person} onChange={(e) => onFilter("person", e.target.value)}>
           <option value="">All people</option>
           {personen.map((p) => (
             <option key={p.id} value={p.id}>
@@ -46,7 +61,7 @@ export function TimelineFilterBar({ personen, orte, typen, gewaehltePerson }: Pr
 
       <label>
         Location
-        <select defaultValue="" disabled>
+        <select value={filter.ort} onChange={(e) => onFilter("ort", e.target.value)}>
           <option value="">All locations</option>
           {orte.map((o) => (
             <option key={o.id} value={o.id}>
@@ -58,7 +73,7 @@ export function TimelineFilterBar({ personen, orte, typen, gewaehltePerson }: Pr
 
       <label>
         Type
-        <select defaultValue="" disabled>
+        <select value={filter.typ} onChange={(e) => onFilter("typ", e.target.value)}>
           <option value="">All event types</option>
           {typen.map((t) => (
             <option key={t} value={t}>

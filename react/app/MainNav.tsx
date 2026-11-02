@@ -7,8 +7,10 @@ interface NavEintrag {
 
 const EINTRAEGE: readonly NavEintrag[] = [
   { pfad: "/dashboard", label: "Dashboard" },
+  { pfad: "/evidence", label: "Evidence" },
   { pfad: "/team/people", label: "People & Locations" },
-  { pfad: "/timeline", label: "Timeline" }
+  { pfad: "/timeline", label: "Timeline" },
+  { pfad: "/workspace", label: "Workspace" }
 ];
 
 /**
