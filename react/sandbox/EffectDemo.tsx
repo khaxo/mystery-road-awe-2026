@@ -13,25 +13,74 @@ import { useEffect, useState } from "react";
  *   3. Was passiert, wenn sie fehlt?
  */
 
-/** Zaehlt, wie oft ein Effekt gelaufen ist - ausserhalb von React, damit das
- *  Zaehlen selbst keinen Render ausloest und die Zahlen nicht verfaelscht. */
-const laeufe = { ohne: 0, leer: 0, gefuellt: 0 };
+/* ------------------------------------------------------------------ *
+ * Demo 1: ein Seiteneffekt IM RENDER
+ * ------------------------------------------------------------------ */
 
+const imRender = { zaehler: 0 };
+
+/**
+ * Absichtlich falsch gebaut. Nur in dieser Wegwerf-Ansicht.
+ *
+ * Die Komponente veraendert bei jedem Render eine Variable ausserhalb von
+ * sich. Das ist ein Seiteneffekt im Render - und er "funktioniert"
+ * scheinbar: Die Zahl steigt, die Anzeige stimmt.
+ *
+ * Nur steigt sie pro Klick um ZWEI, nicht um eins. Denn React ruft die
+ * Funktion im StrictMode absichtlich zweimal auf, um genau solche Effekte
+ * aufzudecken. Im Produktionsbuild waere es wieder eins - derselbe Code,
+ * zwei verschiedene Ergebnisse.
+ *
+ * Und das ist die eigentliche Lektion: Eine Renderfunktion darf keine Spuren
+ * hinterlassen, weil nicht sie entscheidet, wie oft sie laeuft.
+ */
+function SeiteneffektImRender({ klicks }: { klicks: number }) {
+  // Genau diese Zeile ist der Fehler - und der Linter sagt es auch:
+  //
+  //   react-hooks/immutability
+  //   "Modifying a variable defined outside a component or hook is not
+  //    allowed. Consider using an effect."
+  //
+  // Die Regel kam mit eslint-plugin-react-hooks dazu. Hier ist sie
+  // abgeschaltet, weil diese Komponente den Fehler ZEIGEN soll.
+  // eslint-disable-next-line react-hooks/immutability
+  imRender.zaehler += 1;
+
+  return (
+    <p>
+      {klicks} Klicks &rarr; die Variable steht bei <strong>{imRender.zaehler}</strong>
+    </p>
+  );
+}
+
+/**
+ * Drei Effekte, drei Abhaengigkeitslisten.
+ *
+ * Die Beobachtung laeuft ueber die KONSOLE, nicht ueber Zahlen auf dem
+ * Bildschirm. Das hat einen Grund, der selbst zur Sache gehoert: Effekte
+ * laufen NACH dem Rendern. Ein Zaehler, den ein Effekt erhoeht, ist auf dem
+ * Bildschirm immer einen Render alt - und dieser Zaehler selbst darf keinen
+ * neuen Render ausloesen, sonst laeuft der Effekt ohne Abhaengigkeitsliste
+ * endlos.
+ *
+ * Die Konsole hat dieses Problem nicht: Sie zeigt die Reihenfolge, in der
+ * tatsaechlich etwas passiert ist.
+ */
 function Zaehler({ wert }: { wert: number }) {
   // KEINE Abhaengigkeitsliste: laeuft nach JEDEM Render.
   useEffect(() => {
-    laeufe.ohne += 1;
+    console.log(`  [keine Liste]  laeuft   (wert ist ${wert})`);
   });
 
   // LEERE Liste: laeuft einmal, beim Mounten.
-  // (In der Entwicklung zweimal - StrictMode mountet absichtlich doppelt.)
+  // In der Entwicklung zweimal - StrictMode mountet absichtlich doppelt.
   useEffect(() => {
-    laeufe.leer += 1;
+    console.log("  [leere Liste]  laeuft   (nur beim Mounten)");
   }, []);
 
   // GEFUELLTE Liste: laeuft, wenn sich `wert` aendert.
   useEffect(() => {
-    laeufe.gefuellt += 1;
+    console.log(`  [Liste [wert]] laeuft   (wert ist jetzt ${wert})`);
   }, [wert]);
 
   return (
@@ -39,29 +88,23 @@ function Zaehler({ wert }: { wert: number }) {
       <tbody>
         <tr>
           <td>
-            <code>useEffect(fn)</code> &mdash; keine Liste
+            <code>useEffect(fn)</code>
           </td>
-          <td>
-            <strong>{laeufe.ohne}</strong> Laeufe
-          </td>
+          <td>keine Liste</td>
           <td>nach jedem Render</td>
         </tr>
         <tr>
           <td>
-            <code>useEffect(fn, [])</code> &mdash; leer
+            <code>useEffect(fn, [])</code>
           </td>
-          <td>
-            <strong>{laeufe.leer}</strong> Laeufe
-          </td>
+          <td>leere Liste</td>
           <td>einmal beim Mounten</td>
         </tr>
         <tr>
           <td>
-            <code>useEffect(fn, [wert])</code> &mdash; gefuellt
+            <code>useEffect(fn, [wert])</code>
           </td>
-          <td>
-            <strong>{laeufe.gefuellt}</strong> Laeufe
-          </td>
+          <td>gefuellte Liste</td>
           <td>
             wenn sich <code>wert</code> aendert
           </td>
@@ -127,6 +170,7 @@ function TimerOhneAufraeumen({ marke }: { marke: number }) {
 }
 
 export function EffectDemo() {
+  const [klicks, setKlicks] = useState(0);
   const [wert, setWert] = useState(0);
   const [andererWert, setAndererWert] = useState(0);
   const [timerSichtbar, setTimerSichtbar] = useState(false);
@@ -138,22 +182,47 @@ export function EffectDemo() {
       <h2>Sandbox: Effekte, Abhaengigkeiten, Aufraeumen</h2>
       <p className="hint-text">Wegwerf-Ansicht fuer Demo 2 und Demo 3. Konsole oeffnen.</p>
 
+      <h3>0. Seiteneffekt im Render (Demo 1)</h3>
+      <p className="hint-text">
+        Diese Komponente erhoeht beim Rendern eine Variable ausserhalb von sich. Die Zahl steigt pro
+        Klick um <strong>zwei</strong> &mdash; StrictMode ruft die Renderfunktion in der Entwicklung
+        absichtlich doppelt auf. Im Produktionsbuild waere es eins.
+      </p>
+      <div className="form-actions">
+        <button type="button" className="btn btn-secondary" onClick={() => setKlicks(klicks + 1)}>
+          einmal neu rendern (Klicks: {klicks})
+        </button>
+      </div>
+      <SeiteneffektImRender klicks={klicks} />
+
       <h3>1. Wie oft laeuft welcher Effekt?</h3>
       <div className="form-actions">
-        <button type="button" className="btn btn-primary" onClick={() => setWert(wert + 1)}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => {
+            console.log(`--- wert: ${wert} -> ${wert + 1} ---`);
+            setWert(wert + 1);
+          }}
+        >
           wert erhoehen (jetzt {wert})
         </button>
         <button
           type="button"
           className="btn btn-secondary"
-          onClick={() => setAndererWert(andererWert + 1)}
+          onClick={() => {
+            console.log(`--- anderer Zustand: ${andererWert} -> ${andererWert + 1} ---`);
+            setAndererWert(andererWert + 1);
+          }}
         >
           anderen Zustand erhoehen (jetzt {andererWert})
         </button>
       </div>
       <p className="hint-text">
-        Der zweite Knopf loest ein Render aus, ohne <code>wert</code> zu aendern. Danach steigt die
-        erste Zahl, die dritte nicht.
+        In der Konsole mitlesen. Der <strong>erste</strong> Knopf aendert <code>wert</code>: Dann
+        laufen der Effekt ohne Liste <em>und</em> der mit <code>[wert]</code>. Der{" "}
+        <strong>zweite</strong> Knopf loest ein Render aus, ohne <code>wert</code> zu aendern: Dann
+        laeuft nur der ohne Liste. Der mit der leeren Liste laeuft nie wieder.
       </p>
       <Zaehler wert={wert} />
 
