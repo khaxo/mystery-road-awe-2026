@@ -13,12 +13,8 @@ import { ControlledDemo } from "./sandbox/ControlledDemo.js";
 import { KeyDemo } from "./sandbox/KeyDemo.js";
 import type { CaseDaten } from "./shared/hooks/useCaseData.js";
 import { useCaseData } from "./shared/hooks/useCaseData.js";
-import {
-  leseBookmarks,
-  leseNotizen,
-  schreibeBookmarks,
-  schreibeNotizen
-} from "./shared/state/speicher.js";
+import { BookmarkProvider } from "./shared/state/BookmarkContext.js";
+import { leseNotizen, schreibeNotizen } from "./shared/state/speicher.js";
 
 /** Vom Benutzer gesetzter Pruefstand eines Belegs. */
 export interface Pruefstand {
@@ -44,9 +40,6 @@ export interface Pruefstand {
  * Faellen derselbe: Sie werden an einer Stelle GEAENDERT und an einer anderen
  * GELESEN, und diese Komponente ist der tiefste gemeinsame Vorfahr.
  *
- *   bookmarks   geaendert im Belegkatalog
- *               gelesen vom Dashboard (Zaehler) und vom Workspace (Liste)
- *
  *   notizen     geschrieben in der Belegdetailansicht
  *               gelesen im Workspace
  *
@@ -59,8 +52,12 @@ export interface Pruefstand {
  * gaebe es zwei Listen von Belegen - die geladene und die kopierte - und damit
  * genau die doppelte Wahrheit, die diese Uebung vermeiden will.
  *
- * Die Benutzeranmerkungen (Lesezeichen, Notizen, Pruefstand) liegen deshalb
- * NEBEN den Daten, nicht in ihnen. Zusammengefuehrt werden sie beim Rendern.
+ * Die Benutzeranmerkungen (Notizen, Pruefstand) liegen deshalb NEBEN den
+ * Daten, nicht in ihnen. Zusammengefuehrt werden sie beim Rendern.
+ *
+ * Die LESEZEICHEN sind seit Demo 8 kein Zustand dieser Komponente mehr. Sie
+ * liegen im BookmarkProvider weiter unten - dasselbe useState, nur an einem
+ * Ort, von dem aus es ohne Prop-Kette erreichbar ist.
  */
 export function App() {
   const { laedt, fehler, ...geladen } = useCaseData();
@@ -68,36 +65,8 @@ export function App() {
   // Startwerte aus dem localStorage. Die Funktion wird uebergeben, nicht
   // aufgerufen: useState(f) ruft f nur beim Mounten auf, useState(f()) wuerde
   // bei jedem Render lesen.
-  const [bookmarks, setBookmarks] = useState<string[]>(leseBookmarks);
   const [notizen, setNotizen] = useState<Record<string, string>>(leseNotizen);
   const [pruefung, setPruefung] = useState<Record<string, Pruefstand>>({});
-
-  /**
-   * Lesezeichen umschalten.
-   *
-   * Es wird ein NEUES Array gebaut - entweder ohne die Nummer (filter) oder mit
-   * einer zusaetzlichen (Spread). Das alte Array wird nicht angefasst.
-   *
-   * Die Vanilla-Fassung tat beides anders:
-   *     state.bookmarks.push(evidenceId);   // veraendert das Array
-   *     ev.bookmarked = true;               // veraendert das geladene Objekt
-   * Das zweite ist die eigentliche Falle: `ev` ist dasselbe Objekt, das auch in
-   * state.allEvidence liegt. Die Markierung landete also IN den Falldaten.
-   *
-   * Warum kein Updater (`setBookmarks(v => ...)`): Ein Klick loest genau eine
-   * Aktualisierung aus, ein veralteter Wert ist hier nicht moeglich. Dafuer
-   * bleibt der Setter frei von Seiteneffekten - das Schreiben in den
-   * localStorage steht daneben und nicht in der Updater-Funktion, die React
-   * im StrictMode absichtlich zweimal aufruft.
-   */
-  function toggleBookmark(evidenceId: string) {
-    const neu = bookmarks.includes(evidenceId)
-      ? bookmarks.filter((id) => id !== evidenceId)
-      : [...bookmarks, evidenceId];
-
-    setBookmarks(neu);
-    schreibeBookmarks(neu);
-  }
 
   function speichereNotiz(evidenceId: string, text: string) {
     const neu = { ...notizen, [evidenceId]: text };
@@ -131,8 +100,6 @@ export function App() {
   const belegkatalog = (
     <EvidenceView
       daten={daten}
-      bookmarks={bookmarks}
-      onToggleBookmark={toggleBookmark}
       notizen={notizen}
       onNotizSpeichern={speichereNotiz}
       onPruefung={setzePruefung}
@@ -141,55 +108,57 @@ export function App() {
 
   return (
     <HashRouter>
-      <AppHeader />
+      {/* Der Provider umschliesst alles, was Lesezeichen braucht. Haette er
+          nur die Routen umschlossen, waere der Kopfbereich aussen vor - dort
+          koennte spaeter ein Zaehler stehen. */}
+      <BookmarkProvider>
+        <AppHeader />
 
-      <main id="app" className="app-main">
-        {/* Conditional Rendering, Technik 3: Ternaer-Kette fuer sich
+        <main id="app" className="app-main">
+          {/* Conditional Rendering, Technik 3: Ternaer-Kette fuer sich
             gegenseitig ausschliessende Zustaende. */}
-        {fehler ? (
-          <section className="view active">
-            <h2>Daten konnten nicht geladen werden</h2>
-            <p>{fehler}</p>
-          </section>
-        ) : laedt ? (
-          <section className="view active">
-            <h2>Case file</h2>
-            <p>Loading case file&hellip;</p>
-          </section>
-        ) : (
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route
-              path="/dashboard"
-              element={<DashboardView daten={daten} anzahlBookmarks={bookmarks.length} />}
-            />
+          {fehler ? (
+            <section className="view active">
+              <h2>Daten konnten nicht geladen werden</h2>
+              <p>{fehler}</p>
+            </section>
+          ) : laedt ? (
+            <section className="view active">
+              <h2>Case file</h2>
+              <p>Loading case file&hellip;</p>
+            </section>
+          ) : (
+            <Routes>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<DashboardView daten={daten} />} />
 
-            <Route path="/evidence" element={belegkatalog} />
-            <Route path="/evidence/:evidenceId" element={belegkatalog} />
+              <Route path="/evidence" element={belegkatalog} />
+              <Route path="/evidence/:evidenceId" element={belegkatalog} />
 
-            {/* /team ohne Tab -> auf den Personen-Tab umleiten */}
-            <Route path="/team" element={<Navigate to="/team/people" replace />} />
-            <Route path="/team/:tab" element={<TeamView daten={daten} />} />
-            <Route path="/team/people/:personId" element={<PersonDetailView daten={daten} />} />
+              {/* /team ohne Tab -> auf den Personen-Tab umleiten */}
+              <Route path="/team" element={<Navigate to="/team/people" replace />} />
+              <Route path="/team/:tab" element={<TeamView daten={daten} />} />
+              <Route path="/team/people/:personId" element={<PersonDetailView daten={daten} />} />
 
-            <Route path="/timeline" element={<TimelineView daten={daten} />} />
+              <Route path="/timeline" element={<TimelineView daten={daten} />} />
 
-            <Route
-              path="/workspace"
-              element={<WorkspaceView daten={daten} bookmarks={bookmarks} notizen={notizen} />}
-            />
+              <Route
+                path="/workspace"
+                element={<WorkspaceView daten={daten} notizen={notizen} />}
+              />
 
-            {/* Wegwerf-Routen fuer Demos. Nicht in der Navigation verlinkt. */}
-            <Route path="/sandbox/keys" element={<KeyDemo daten={daten} />} />
-            <Route path="/sandbox/controlled" element={<ControlledDemo />} />
+              {/* Wegwerf-Routen fuer Demos. Nicht in der Navigation verlinkt. */}
+              <Route path="/sandbox/keys" element={<KeyDemo daten={daten} />} />
+              <Route path="/sandbox/controlled" element={<ControlledDemo />} />
 
-            {/* Catch-all. Der Vanilla-Code hat bei unbekanntem Hash still auf
+              {/* Catch-all. Der Vanilla-Code hat bei unbekanntem Hash still auf
                 Dashboard umgeleitet; hier gibt es stattdessen eine echte
                 404-Ansicht - siehe NotFoundView. */}
-            <Route path="*" element={<NotFoundView />} />
-          </Routes>
-        )}
-      </main>
+              <Route path="*" element={<NotFoundView />} />
+            </Routes>
+          )}
+        </main>
+      </BookmarkProvider>
     </HashRouter>
   );
 }

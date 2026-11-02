@@ -1,4 +1,5 @@
 import type { CaseDaten } from "../../shared/hooks/useCaseData.js";
+import { useBookmarks } from "../../shared/state/BookmarkContext.js";
 import { CaseSummaryCard } from "./components/CaseSummaryCard.js";
 import { RecentEvidenceList } from "./components/RecentEvidenceList.js";
 import { RecentTimelineList } from "./components/RecentTimelineList.js";
@@ -7,15 +8,6 @@ import { StatCard } from "./components/StatCard.js";
 
 interface Props {
   daten: CaseDaten;
-  /**
-   * Kommt jetzt von App.tsx, nicht mehr aus dem localStorage.
-   *
-   * Bis Uebung 4 las diese Datei den Zaehler selbst aus dem Speicher - das war
-   * die einzige Moeglichkeit, solange der Belegkatalog noch Vanilla war. Jetzt
-   * besitzt App die Lesezeichen, und das Dashboard bekommt die Zahl gereicht.
-   * Damit gibt es nur noch EINE Stelle, an der steht, was markiert ist.
-   */
-  anzahlBookmarks: number;
 }
 
 /**
@@ -33,7 +25,14 @@ interface Props {
  *    viewRendered-Flags nur beim ERSTEN Besuch der View. Daher die veralteten
  *    Zahlen dort.
  */
-export function DashboardView({ daten, anzahlBookmarks }: Props) {
+export function DashboardView({ daten }: Props) {
+  // Der Zaehler ist eine ABGELEITETE Zahl: die Laenge der einen Liste, die es
+  // gibt. Bis Uebung 4 las diese Datei den localStorage selbst, danach kam die
+  // Zahl als Prop, jetzt aus dem Context. Gemeinsam ist allen drei Fassungen,
+  // dass die Zahl nirgends GESPEICHERT wird - genau deshalb kann sie nicht
+  // veralten wie der Zaehler in der Vanilla-Version.
+  const { bookmarks } = useBookmarks();
+
   const geprueft = daten.evidence.filter((ev) => ev.status === "reviewed").length;
 
   // slice() vor reverse(), weil reverse() in place arbeitet - genau der
@@ -51,7 +50,7 @@ export function DashboardView({ daten, anzahlBookmarks }: Props) {
         <StatCard wert={daten.evidence.length} label="Evidence items" />
         <StatCard wert={daten.people.length} label="People" />
         <StatCard wert={daten.locations.length} label="Locations" />
-        <StatCard wert={anzahlBookmarks} label="Bookmarked" />
+        <StatCard wert={bookmarks.length} label="Bookmarked" />
         <StatCard wert={geprueft} label="Reviewed" />
       </div>
 

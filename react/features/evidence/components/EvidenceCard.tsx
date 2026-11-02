@@ -2,13 +2,10 @@ import { Link } from "react-router-dom";
 import type { Evidence } from "../../../../js/types.js";
 import { formatDate, getRelevanceBadgeClass, getStatusBadgeClass } from "../../../../js/utils.js";
 import { Badge } from "../../../shared/components/Badge.js";
+import { useBookmarks } from "../../../shared/state/BookmarkContext.js";
 
 interface Props {
   beleg: Evidence;
-  /** Fertig entschieden. Die Karte schaut nicht selbst in der Bookmark-Liste nach. */
-  markiert: boolean;
-  /** Rueckruf nach oben. Die Karte aendert nichts selbst. */
-  onToggleBookmark: (evidenceId: string) => void;
 }
 
 /**
@@ -30,8 +27,18 @@ interface Props {
  * 3. Das Oeffnen der Detailansicht ist ein <Link>, kein Klick auf die Karte.
  *    Damit ist ein Beleg verlinkbar - die Fortsetzung der Routing-Entscheidung
  *    aus Uebung 4.
+ *
+ * Seit Demo 8 holt sie den Lesezeichen-Zustand per useBookmarks() selbst,
+ * statt ihn als Props zu bekommen. Das hat einen Preis, der hier benannt
+ * sein soll: Diese Karte ist nicht mehr beliebig einsetzbar. Sie LAEUFT NUR
+ * innerhalb eines BookmarkProvider und wirft sonst. Mit Props waere sie in
+ * jedem Kontext verwendbar gewesen. Context nimmt Durchreichearbeit weg und
+ * gibt dafuer eine unsichtbare Abhaengigkeit zurueck.
  */
-export function EvidenceCard({ beleg, markiert, onToggleBookmark }: Props) {
+export function EvidenceCard({ beleg }: Props) {
+  const { istMarkiert, toggleBookmark } = useBookmarks();
+  const markiert = istMarkiert(beleg.id);
+
   return (
     <div className="evidence-card">
       <button
@@ -39,7 +46,7 @@ export function EvidenceCard({ beleg, markiert, onToggleBookmark }: Props) {
         className={markiert ? "bookmark-btn active" : "bookmark-btn"}
         aria-label={`Toggle bookmark for ${beleg.title}`}
         aria-pressed={markiert}
-        onClick={() => onToggleBookmark(beleg.id)}
+        onClick={() => toggleBookmark(beleg.id)}
       >
         <span className="bookmark-icon">{markiert ? "★" : "☆"}</span>
       </button>

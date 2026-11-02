@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { CaseDaten } from "../../shared/hooks/useCaseData.js";
+import { useBookmarks } from "../../shared/state/BookmarkContext.js";
 import { BookmarkList } from "./components/BookmarkList.js";
 import type { NotizEintrag } from "./components/NotesList.js";
 import { NotesList } from "./components/NotesList.js";
@@ -7,7 +8,6 @@ import { HypothesisForm } from "./components/HypothesisForm.js";
 
 interface Props {
   daten: CaseDaten;
-  bookmarks: readonly string[];
   notizen: Record<string, string>;
 }
 
@@ -17,7 +17,9 @@ interface Props {
  * Zeigt drei Dinge: die markierten Belege, die gespeicherten Notizen und das
  * Hypothesen-Formular.
  */
-export function WorkspaceView({ daten, bookmarks, notizen }: Props) {
+export function WorkspaceView({ daten, notizen }: Props) {
+  const { bookmarks } = useBookmarks();
+
   // Eigene Liste der angezeigten Lesezeichen, damit das Entfernen hier
   // sofort sichtbar ist, ohne auf den Zustand weiter oben zu warten.
   const [sichtbareBookmarks, setSichtbareBookmarks] = useState<string[]>([...bookmarks]);

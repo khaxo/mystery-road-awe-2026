@@ -10,9 +10,6 @@ import { EvidenceToolbar } from "./components/EvidenceToolbar.js";
 
 interface Props {
   daten: CaseDaten;
-  /** Einzige Quelle der Wahrheit fuer Lesezeichen - gehoert App.tsx. */
-  bookmarks: readonly string[];
-  onToggleBookmark: (evidenceId: string) => void;
   notizen: Record<string, string>;
   onNotizSpeichern: (evidenceId: string, text: string) => void;
   onPruefung: (evidenceId: string, stand: Pruefstand) => void;
@@ -38,14 +35,7 @@ interface Props {
  * Auch der ausgewaehlte Beleg ist kein Zustand mehr, sondern kommt aus der
  * Route. `state.selectedEvidence` ist damit ersatzlos verschwunden.
  */
-export function EvidenceView({
-  daten,
-  bookmarks,
-  onToggleBookmark,
-  notizen,
-  onNotizSpeichern,
-  onPruefung
-}: Props) {
+export function EvidenceView({ daten, notizen, onNotizSpeichern, onPruefung }: Props) {
   const { evidenceId } = useParams();
 
   // Ein Reducer statt sieben useState-Aufrufe.
@@ -114,7 +104,9 @@ export function EvidenceView({
         />
       )}
 
-      <EvidenceList belege={sichtbar} markierte={bookmarks} onToggleBookmark={onToggleBookmark} />
+      {/* Keine Lesezeichen-Props mehr. Die Karten holen sich den Zustand
+          selbst aus dem Context - diese Ansicht muss ihn nicht durchreichen. */}
+      <EvidenceList belege={sichtbar} />
     </section>
   );
 }
